@@ -1,17 +1,15 @@
 import type { AIAnswer } from '../types'
 import { parseAIAnswer } from './citationValidator'
 
-export type AIProvider = 'google' | 'cgu' | 'grok'
+export type AIProvider = 'google' | 'cgu'
 export const DEFAULT_GEMINI_MODEL = 'gemini-flash-lite-latest'
 export const GOOGLE_AI_STUDIO_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai'
 export const CGU_BASE_URL = 'https://air.cgu.edu.tw/cgullmapi/v1'
 export const CGU_DEFAULT_MODEL = 'gpt-oss-120b'
-export const GROK_BASE_URL = 'https://api.x.ai/v1'
-export const GROK_DEFAULT_MODEL = 'grok-3-mini'
 
 export type RequestOptions = { apiKey: string; modelId: string; provider?: AIProvider; signal?: AbortSignal }
-function providerBaseUrl(provider: AIProvider = 'google') { return provider === 'cgu' ? CGU_BASE_URL : provider === 'grok' ? GROK_BASE_URL : GOOGLE_AI_STUDIO_BASE_URL }
-function providerName(provider: AIProvider) { return provider === 'cgu' ? 'CGU API' : provider === 'grok' ? 'Grok API' : 'Google AI Studio' }
+function providerBaseUrl(provider: AIProvider = 'google') { return provider === 'cgu' ? CGU_BASE_URL : GOOGLE_AI_STUDIO_BASE_URL }
+function providerName(provider: AIProvider) { return provider === 'cgu' ? 'CGU API' : 'Google AI Studio' }
 async function request(path: string, options: RequestOptions, body: unknown) {
   const provider = options.provider ?? 'google'
   if (!options.apiKey.trim()) throw new Error(`請先輸入 ${providerName(provider)} API Key。`)
@@ -35,7 +33,7 @@ async function request(path: string, options: RequestOptions, body: unknown) {
   try { data = text ? JSON.parse(text) : {} } catch { /* sanitized below */ }
   if (!response.ok) {
     const apiMessage = typeof data?.error === 'string' ? data.error : data?.error?.message ?? data?.message ?? (typeof text === 'string' && text.trim() ? text.trim() : '')
-    if (response.status === 401 || response.status === 403 || (provider === 'grok' && response.status === 400 && /(?:api key|api_key|credential|authorization)/i.test(apiMessage))) throw new Error(`${providerName(provider)} API Key 無效或沒有模型權限。請確認使用的是 xAI Console 建立的 xai- API Key。`)
+    if (response.status === 401 || response.status === 403) throw new Error(`${providerName(provider)} API Key 無效或沒有模型權限。`)
     if (response.status === 404) throw new Error(`找不到模型「${options.modelId}」，請檢查模型 ID。`)
     if (response.status === 429) throw new Error(`${providerName(provider)} 配額或速率限制已達上限，請稍後再試。`)
     if (response.status >= 500) throw new Error(`${providerName(provider)} 暫時無法服務，請稍後重試。`)
@@ -59,7 +57,6 @@ export async function listProviderModels(provider: AIProvider, apiKey: string) {
   const body = await response.json() as any
   const models = (Array.isArray(body) ? body : body.data ?? body.models ?? []).map((model: any) => String(model.id ?? model.name ?? '').replace(/^models\//, '')).filter(Boolean) as string[]
   if (provider === 'google') return models.filter((id) => /gemini/i.test(id))
-  if (provider === 'grok') return models.filter((id) => /grok/i.test(id))
   return models.filter((id) => /gpt-oss|gemma|luna|mistral|nemotron/i.test(id))
 }
 

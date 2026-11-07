@@ -72,7 +72,6 @@ footer { display: flex; justify-content: space-between; color: #829089; font-siz
 .student-shell .ratio-control select { width: auto; min-width: 54px; padding: 5px 7px; border-radius: 7px; font-size: 11px; color: var(--teal-dark); background: #fff; }
 .student-shell .toolbar-inline-toggle { order: 0; padding: 7px 8px; border-radius: 0; background: transparent !important; color: var(--teal-dark) !important; font-size: 11px; font-weight: 400; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 .student-shell .notes-toggle { padding: 7px 8px; color: var(--teal-dark); font-size: 11px; line-height: 1; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
-.student-shell .screenshot-toolbar-button { padding: 7px 8px !important; border-radius: 0 !important; background: transparent !important; color: var(--teal-dark) !important; font-size: 11px !important; font-weight: 400 !important; text-decoration: underline; text-underline-offset: 3px; }
 .message-head { display: flex; align-items: start; justify-content: space-between; gap: 8px; }
 .message-head .message-meta { min-width: 0; }
 .favorite-button { flex: 0 0 auto; padding: 0 !important; border-radius: 0 !important; background: transparent !important; color: #c65e55 !important; font-size: 21px !important; font-weight: 400 !important; line-height: 1 !important; }
@@ -94,14 +93,6 @@ footer { display: flex; justify-content: space-between; color: #829089; font-siz
 .note-screenshot img { display: block; width: 100%; max-height: 180px; object-fit: contain; background: #172321; }
 .note-screenshot figcaption { margin-top: 6px; text-align: center; }
 .screenshot-jump { padding: 0 !important; border-radius: 0 !important; background: transparent !important; color: var(--teal-dark) !important; font-size: 11px !important; font-weight: 500 !important; text-decoration: underline; text-underline-offset: 3px; }
-.screenshot-overlay { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 20px; background: rgba(16, 35, 29, .66); }
-.screenshot-dialog { width: min(1100px, 96vw); max-height: 94vh; overflow: auto; padding: 18px; background: #fff; border-radius: 14px; box-shadow: 0 25px 80px rgba(0,0,0,.35); }
-.screenshot-dialog h2 { margin-bottom: 4px; }
-.screenshot-dialog p { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
-.screenshot-stage { position: relative; display: inline-block; max-width: 100%; cursor: crosshair; background: #172321; line-height: 0; }
-.screenshot-source { display: block; max-width: 92vw; max-height: 70vh; object-fit: contain; }
-.screenshot-selection { position: absolute; border: 2px solid #fff; background: rgba(18, 121, 109, .22); box-shadow: 0 0 0 9999px rgba(0,0,0,.3); pointer-events: none; }
-.screenshot-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 @media (max-width: 1100px) {
   .student-shell .mode-switch { width: 100%; flex-wrap: wrap; }
   .student-shell .mode-switch button { flex: 1 1 calc(50% - 6px); min-width: 0; }

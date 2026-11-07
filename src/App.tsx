@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, ReactNode } from 'react'
 import type { ChatMessage, Citation, TranscriptDocument, TutorMode } from './types'
 import { buildChunks } from './services/chunker'
@@ -62,7 +62,7 @@ function renderInlineMarkdown(value: string, citations?: Map<string, Citation>, 
     if (index > last) nodes.push(value.slice(last, index))
     const token = match[0]
     const citation = citations?.get(normalizeCitationId(token))
-    if (citation && onCitation) nodes.push(<a key={`${index}-citation`} href="#video-player" onClick={(event) => { event.preventDefault(); onCitation(citation.start) }}>{fmt(citation.start)}</a>)
+    if (citation && onCitation) nodes.push(<Fragment key={`${index}-citation`}><a href="#video-player" onClick={(event) => { event.preventDefault(); onCitation(citation.start) }}>{fmt(citation.start)}</a>{' '}</Fragment>)
     else if (token.startsWith('`')) nodes.push(<code key={`${index}-code`}>{token.slice(1, -1)}</code>)
     else if (token.startsWith('**') || token.startsWith('__')) nodes.push(<strong key={`${index}-strong`}>{renderInlineMarkdown(token.slice(2, -2), citations, onCitation)}</strong>)
     else if (token.startsWith('*') || token.startsWith('_')) nodes.push(<em key={`${index}-em`}>{renderInlineMarkdown(token.slice(1, -1), citations, onCitation)}</em>)

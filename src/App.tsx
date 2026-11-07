@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, DragEvent } from 'react'
+import type { ChangeEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import type { ChatMessage, TranscriptDocument, TutorMode } from './types'
 import { buildChunks } from './services/chunker'
 import { makeCitationCards } from './services/citationValidator'
@@ -46,6 +46,50 @@ function clearStoredApiKey(provider: AIProvider) {
   } catch { /* ignore blocked storage */ }
 }
 
+function renderInlineMarkdown(value: string): ReactNode[] {
+  const pattern = /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_([^_]+)_|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\))/g
+  const nodes: ReactNode[] = []
+  let last = 0
+  for (const match of value.matchAll(pattern)) {
+    const index = match.index ?? 0
+    if (index > last) nodes.push(value.slice(last, index))
+    const token = match[0]
+    if (token.startsWith('`')) nodes.push(<code key={`${index}-code`}>{token.slice(1, -1)}</code>)
+    else if (token.startsWith('**') || token.startsWith('__')) nodes.push(<strong key={`${index}-strong`}>{token.slice(2, -2)}</strong>)
+    else if (token.startsWith('*') || token.startsWith('_')) nodes.push(<em key={`${index}-em`}>{token.slice(1, -1)}</em>)
+    else if (token.startsWith('[')) nodes.push(<a key={`${index}-link`} href={match[4]} target="_blank" rel="noreferrer">{match[3]}</a>)
+    last = index + token.length
+  }
+  if (last < value.length) nodes.push(value.slice(last))
+  return nodes
+}
+
+function renderMarkdown(value: string): ReactNode {
+  const lines = value.split(/\r?\n/)
+  const blocks: ReactNode[] = []
+  let paragraph: string[] = []
+  let list: string[] = []
+  let ordered = false
+  let codeLines: string[] = []
+  let inCode = false
+  const flushParagraph = () => { if (paragraph.length) { blocks.push(<p key={`p-${blocks.length}`}>{renderInlineMarkdown(paragraph.join(' '))}</p>); paragraph = [] } }
+  const flushList = () => { if (list.length) { const items = list; blocks.push(ordered ? <ol key={`ol-${blocks.length}`}>{items.map((item, index) => <li key={index}>{renderInlineMarkdown(item)}</li>)}</ol> : <ul key={`ul-${blocks.length}`}>{items.map((item, index) => <li key={index}>{renderInlineMarkdown(item)}</li>)}</ul>); list = [] } }
+  lines.forEach((line, index) => {
+    if (line.trim().startsWith('```')) { if (inCode) { blocks.push(<pre key={`code-${index}`}><code>{codeLines.join('\n')}</code></pre>); codeLines = []; inCode = false } else { flushParagraph(); flushList(); codeLines = []; inCode = true } return }
+    if (inCode) { codeLines.push(line); return }
+    const heading = line.match(/^(#{1,6})\s+(.+)$/)
+    const bullet = line.match(/^\s*[-*+]\s+(.+)$/)
+    const number = line.match(/^\s*\d+[.)]\s+(.+)$/)
+    if (heading) { flushParagraph(); flushList(); const level = heading[1].length; const Tag = (`h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'); blocks.push(<Tag key={`h-${index}`}>{renderInlineMarkdown(heading[2])}</Tag>); return }
+    if (bullet || number) { flushParagraph(); if (list.length && ordered !== Boolean(number)) flushList(); ordered = Boolean(number); list.push((bullet ?? number)![1]); return }
+    if (!line.trim()) { flushParagraph(); flushList(); return }
+    flushList(); paragraph.push(line.trim())
+  })
+  if (inCode) blocks.push(<pre key="code-final"><code>{codeLines.join('\n')}</code></pre>)
+  flushParagraph(); flushList()
+  return <>{blocks}</>
+}
+
 const fmt = (seconds: number) => {
   if (!Number.isFinite(seconds) || seconds < 0) return '--:--'
   const total = Math.floor(seconds)
@@ -81,17 +125,34 @@ export default function App() {
   const [chat, setChat] = useState<ChatMessage[]>([])
   const [asking, setAsking] = useState(false)
   const [notice, setNotice] = useState('')
-  const [dragging, setDragging] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [toolbarHidden, setToolbarHidden] = useState(false)
+  const [splitRatio, setSplitRatio] = useState(75)
+  const [resizing, setResizing] = useState(false)
   const playerHost = useRef<HTMLDivElement>(null)
   const player = useRef<YouTubePlayer | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  const layoutRef = useRef<HTMLElement>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   const chunks = useMemo(() => transcript ? buildChunks(transcript.cues) : [], [transcript])
   const appStatus = statusLabel(apiKey, videoId, transcript, playerReady, asking)
 
   useEffect(() => { saveApiKey(provider, apiKey) }, [provider, apiKey])
+
+  useEffect(() => {
+    if (!resizing) return
+    const onMove = (event: PointerEvent) => {
+      const bounds = layoutRef.current?.getBoundingClientRect()
+      if (!bounds) return
+      const next = ((event.clientX - bounds.left) / bounds.width) * 100
+      setSplitRatio(Math.max(55, Math.min(85, next)))
+    }
+    const onUp = () => setResizing(false)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp) }
+  }, [resizing])
 
   useEffect(() => {
     if (!videoId || !playerHost.current) return
@@ -128,8 +189,6 @@ export default function App() {
   }
 
   const onFileChange = (event: ChangeEvent<HTMLInputElement>) => { void importCoursePackage(event.target.files?.[0]); event.target.value = '' }
-  const onDrop = (event: DragEvent<HTMLDivElement>) => { event.preventDefault(); setDragging(false); void importCoursePackage(event.dataTransfer.files?.[0]) }
-
   const changeProvider = (next: AIProvider) => {
     setProvider(next); setApiKey(readStoredApiKey(next)); setModelOptions([]); setConnection({ kind: 'idle', message: '' }); setModelId(next === 'cgu' ? CGU_DEFAULT_MODEL : DEFAULT_GEMINI_MODEL)
   }
@@ -174,21 +233,16 @@ export default function App() {
   }
 
   return <div className="app-shell">
-    <header className="topbar"><div><p className="eyebrow">VIDEO AI TUTOR</p><h1>課堂影片時間感知 AI 助教</h1></div><div className="topbar-actions"><span className={`status-pill ${appStatus.toLowerCase()}`}>{appStatus}</span><button className="settings-toggle" onClick={() => setSettingsOpen(true)}>模型設定</button></div></header>
-    {settingsOpen && <div className="settings-overlay" role="presentation"><section className="card settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="section-heading"><div><h2 id="settings-title">模型設定</h2><p>API Key 只保存在本次頁面記憶體，重新整理後需重新輸入。</p></div><button className="close-button" onClick={() => setSettingsOpen(false)} aria-label="關閉模型設定">×</button></div><label htmlFor="provider">API Provider</label><select id="provider" value={provider} onChange={(e) => changeProvider(e.target.value as AIProvider)}><option value="google">Google AI Studio</option><option value="cgu">CGU API</option></select><label htmlFor="api-key">{provider === 'cgu' ? 'CGU API Key' : 'Google AI Studio API Key'}</label><div className="key-input"><input id="api-key" type={showKey ? 'text' : 'password'} value={apiKey} onChange={(e) => { setApiKey(e.target.value); setConnection({ kind: 'idle', message: '' }) }} placeholder="貼上你的 API Key" autoComplete="off" /><button className="icon-button" onClick={() => setShowKey((value) => !value)} aria-label={showKey ? '隱藏金鑰' : '顯示金鑰'}>{showKey ? '隱藏' : '顯示'}</button></div><div className="model-row"><label htmlFor="model-id">模型 ID</label><input id="model-id" value={modelId} onChange={(e) => setModelId(e.target.value)} list="model-options" /><datalist id="model-options">{modelOptions.map((model) => <option value={model} key={model} />)}</datalist></div><div className="button-row"><button onClick={testConnection} disabled={connection.kind === 'working' || !apiKey.trim()}>{connection.kind === 'working' ? '測試中…' : '測試連線'}</button><button className="secondary-button" onClick={loadModels} disabled={!apiKey.trim()}>讀取模型清單</button><button className="danger-button" onClick={clearApiKey} disabled={!apiKey}>清除 API Key</button></div>{connection.message && <p className={connection.kind === 'error' ? 'error-text' : 'success-text'} role="status">{connection.message}</p>}<p className="privacy-note">目前 provider：{provider === 'cgu' ? 'CGU API（預設 OSS 120B）' : 'Google AI Studio（預設 gemini-flash-lite-latest）'}。請勿將含敏感資訊的字幕直接送往第三方服務。</p></section></div>}
-    <main className="layout">
-      <section className="left-column">
-        <article className="card setup-card course-package-card">
-          <div className="section-heading"><div><h2>上傳課程包</h2><p>請向老師取得 `.vait` 課程包；影片網址與字幕會自動載入，不需要在學生端貼上 YouTube 網址。</p></div></div>
-          {!transcript ? <div className={`drop-zone ${dragging ? 'dragging' : ''}`} onDragOver={(e) => { e.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={onDrop} onClick={() => fileInput.current?.click()} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.current?.click() }}><strong>拖放課程包到這裡</strong><span>或點擊選擇 `.vait` 檔案</span><input ref={fileInput} type="file" accept=".vait,application/octet-stream" onChange={onFileChange} /></div> : <div className="package-loaded package-loaded-expanded" role="status"><span>已載入：{transcript.fileName} · {transcript.cueCount} 段字幕{videoId ? ' · YouTube 影片已就緒' : ''}</span><button className="secondary-button" onClick={() => window.open('./', '_blank', 'noopener,noreferrer')}>上傳其他課程包</button></div>}
-          {videoError && <p className="error-text" role="alert">{videoError} {videoId && <a href={youtubeUrl(videoId)} target="_blank" rel="noreferrer">在 YouTube 開啟</a>}</p>}
-        </article>
-        <article className="card video-card"><div className="player-wrap">{videoId ? <div ref={playerHost} className="youtube-host" /> : <div className="empty-player"><span>▶</span><p>匯入課程包後，影片會顯示在這裡</p></div>}</div><div className="time-row"><strong>{fmt(currentTime)}</strong><span>/ {fmt(duration)}</span><span className="time-hint">字幕時間直接對應影片時間</span></div></article>
+    <header className={`topbar ${toolbarHidden ? 'topbar-hidden' : ''}`}><div><p className="eyebrow">VIDEO AI TUTOR</p><h1>課堂影片時間感知 AI 助教</h1></div>{!toolbarHidden && <div className="topbar-actions"><span className={`status-pill ${appStatus.toLowerCase()}`}>{appStatus}</span><button className="header-action" onClick={() => fileInput.current?.click()}>上傳課程包</button>{transcript && <button className="header-action" onClick={() => window.open('./', '_blank', 'noopener,noreferrer')}>上傳其他課程包</button>}<a className="teacher-link" href="./teacher.html">老師課程包工具</a><button className="settings-toggle" onClick={() => setSettingsOpen(true)}>AI模型設定</button></div>}<button className="toolbar-toggle" onClick={() => setToolbarHidden((value) => !value)}>{toolbarHidden ? '顯示工具列' : '隱藏工具列'}</button><input ref={fileInput} className="visually-hidden-input" type="file" accept=".vait,application/octet-stream" onChange={onFileChange} /></header>
+    {settingsOpen && <div className="settings-overlay" role="presentation"><section className="card settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="section-heading"><div><h2 id="settings-title">AI模型設定</h2><p>API Key 會保存在本機瀏覽器，保存期限 1 天；重新整理後仍可沿用。</p></div><button className="close-button" onClick={() => setSettingsOpen(false)} aria-label="關閉模型設定">×</button></div><label htmlFor="provider">API Provider</label><select id="provider" value={provider} onChange={(e) => changeProvider(e.target.value as AIProvider)}><option value="google">Google AI Studio</option><option value="cgu">CGU API</option></select><label htmlFor="api-key">{provider === 'cgu' ? 'CGU API Key' : 'Google AI Studio API Key'}</label><div className="key-input"><input id="api-key" type={showKey ? 'text' : 'password'} value={apiKey} onChange={(e) => { setApiKey(e.target.value); setConnection({ kind: 'idle', message: '' }) }} placeholder="貼上你的 API Key" autoComplete="off" /><button className="icon-button" onClick={() => setShowKey((value) => !value)} aria-label={showKey ? '隱藏金鑰' : '顯示金鑰'}>{showKey ? '隱藏' : '顯示'}</button></div><div className="model-row"><label htmlFor="model-id">模型 ID</label><input id="model-id" value={modelId} onChange={(e) => setModelId(e.target.value)} list="model-options" /><datalist id="model-options">{modelOptions.map((model) => <option value={model} key={model} />)}</datalist></div><div className="button-row"><button onClick={testConnection} disabled={connection.kind === 'working' || !apiKey.trim()}>{connection.kind === 'working' ? '測試中…' : '測試連線'}</button><button className="secondary-button" onClick={loadModels} disabled={!apiKey.trim()}>讀取模型清單</button><button className="danger-button" onClick={clearApiKey} disabled={!apiKey}>清除 API Key</button></div>{connection.message && <p className={connection.kind === 'error' ? 'error-text' : 'success-text'} role="status">{connection.message}</p>}<p className="privacy-note">目前 provider：{provider === 'cgu' ? 'CGU API（預設 OSS 120B）' : 'Google AI Studio（預設 gemini-flash-lite-latest）'}。API Key 保存期限為 24 小時。</p></section></div>}
+    <main ref={layoutRef} className={`layout tutor-layout ${resizing ? 'is-resizing' : ''}`} style={{ gridTemplateColumns: `minmax(0, ${splitRatio}fr) 8px minmax(280px, ${100 - splitRatio}fr)` }}>
+      <section className="left-column video-column">
+        <article className="video-card"><div className="player-wrap">{videoId ? <div ref={playerHost} className="youtube-host" /> : <div className="empty-player"><span>▶</span><p>使用上方「上傳課程包」開始學習</p></div>}</div><div className="time-row"><strong>{fmt(currentTime)}</strong><span>/ {fmt(duration)}</span><span className="time-hint">字幕時間直接對應影片時間</span></div>{videoError && <p className="error-text" role="alert">{videoError} {videoId && <a href={youtubeUrl(videoId)} target="_blank" rel="noreferrer">在 YouTube 開啟</a>}</p>}</article>
       </section>
+      <div className="splitter" role="separator" aria-label="調整影片與 Chatbot 欄寬" aria-orientation="vertical" onPointerDown={(event: ReactPointerEvent<HTMLDivElement>) => { event.preventDefault(); setResizing(true) }} />
       <aside className="right-column">
-        <article className="card chat-card"><div className="chat-header"><div><h2>AI 課堂助教</h2><p>每次提問都會鎖定送出當下的播放時間。</p></div><div className="mode-switch" role="group" aria-label="問答模式"><button className={mode === 'progress' ? 'selected' : ''} onClick={() => setMode('progress')}>跟著進度學習</button><button className={mode === 'review' ? 'selected' : ''} onClick={() => setMode('review')}>全課複習</button></div></div><div className="mode-note">{mode === 'progress' ? '只使用已完整播出的字幕（cue.end ≤ 目前時間）' : '使用整份已匯入字幕，適合課後複習'}</div><div className="messages" aria-live="polite">{chat.length === 0 && <div className="chat-empty"><span>✦</span><p>播放影片、匯入字幕後，問我課堂中已經講過的內容。</p></div>}{chat.map((message) => <div className={`message ${message.role} ${message.status === 'error' ? 'message-error' : ''}`} key={message.id}><div className="message-meta">{message.role === 'user' ? '你' : 'AI 助教'} · {message.mode === 'progress' ? '跟著進度' : '全課複習'} · {fmt(message.cutoffSeconds)}</div><p>{message.text}</p>{message.citations && message.citations.length > 0 && <div className="citations">{message.citations.map((citation) => <div className="citation" key={citation.chunkId}><button onClick={() => jumpTo(citation.start)}>▶ {fmt(citation.start)}</button><span>{citation.excerpt}</span><a href={videoId ? youtubeUrl(videoId, citation.start) : '#'} target="_blank" rel="noreferrer">YouTube ↗</a></div>)}</div>}{message.role === 'assistant' && message.status === 'done' && (!message.citations || message.citations.length === 0) && <p className="unverified">回答沒有可驗證的字幕來源。</p>}</div>)}</div><div className="quick-prompts" aria-label="快速提問">{QUICK_PROMPTS.map((prompt) => <button key={prompt} onClick={() => setQuestion(prompt)} disabled={asking}>{prompt}</button>)}</div><div className="ask-form"><textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={appStatus === 'READY' ? '例如：老師如何解釋這個概念？' : '完成左側設定後即可提問'} disabled={asking} rows={3} onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void submitQuestion() } }} /><button onClick={() => void submitQuestion()} disabled={asking || !question.trim()}>{asking ? '回答中…' : '送出'}</button></div>{asking && <button className="cancel-button" onClick={() => abortRef.current?.abort()}>取消這次提問</button>}{notice && <p className="notice" role="status">{notice}</p>}</article>
+        <article className="card chat-card"><div className="chat-header"><div><h2>AI 課堂助教</h2><p>每次提問都會鎖定送出當下的播放時間。</p></div><div className="mode-switch" role="group" aria-label="問答模式"><button className={mode === 'progress' ? 'selected' : ''} onClick={() => setMode('progress')}>跟著進度學習</button><button className={mode === 'review' ? 'selected' : ''} onClick={() => setMode('review')}>全課複習</button></div></div><div className="mode-note">{mode === 'progress' ? '只使用已完整播出的字幕（cue.end ≤ 目前時間）' : '使用整份已匯入字幕，適合課後複習'}</div><div className="messages" aria-live="polite">{chat.length === 0 && <div className="chat-empty"><span>✦</span><p>播放影片、匯入字幕後，問我課堂中已經講過的內容。</p></div>}{chat.map((message) => <div className={`message ${message.role} ${message.status === 'error' ? 'message-error' : ''}`} key={message.id}><div className="message-meta">{message.role === 'user' ? '你' : 'AI 助教'} · {message.mode === 'progress' ? '跟著進度' : '全課複習'} · {fmt(message.cutoffSeconds)}</div><div className="markdown-content">{message.role === 'assistant' ? renderMarkdown(message.text) : <p>{message.text}</p>}</div>{message.citations && message.citations.length > 0 && <div className="citations">{message.citations.map((citation) => <div className="citation" key={citation.chunkId}><button onClick={() => jumpTo(citation.start)}>▶ {fmt(citation.start)}</button><span>{citation.excerpt}</span><a href={videoId ? youtubeUrl(videoId, citation.start) : '#'} target="_blank" rel="noreferrer">YouTube ↗</a></div>)}</div>}{message.role === 'assistant' && message.status === 'done' && (!message.citations || message.citations.length === 0) && <p className="unverified">回答沒有可驗證的字幕來源。</p>}</div>)}</div><div className="quick-prompts" aria-label="快速提問">{QUICK_PROMPTS.map((prompt) => <button key={prompt} onClick={() => setQuestion(prompt)} disabled={asking}>{prompt}</button>)}</div><div className="ask-form"><textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={appStatus === 'READY' ? '例如：老師如何解釋這個概念？' : '完成左側設定後即可提問'} disabled={asking} rows={3} onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void submitQuestion() } }} /><button onClick={() => void submitQuestion()} disabled={asking || !question.trim()}>{asking ? '回答中…' : '送出'}</button></div>{asking && <button className="cancel-button" onClick={() => abortRef.current?.abort()}>取消這次提問</button>}{notice && <p className="notice" role="status">{notice}</p>}</article>
       </aside>
     </main>
-    <footer><span><a href="./teacher.html">老師課程包工具</a></span></footer>
   </div>
 }

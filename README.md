@@ -39,6 +39,8 @@ Google API 呼叫沿用參考專案的 OpenAI 相容介面：
 
 不會把 Key 寫入 `localStorage`、Cookie、URL、檔案或 log，也不會送往本專案後端。瀏覽器直連第三方 API 仍不能保證金鑰完全保密，建議使用獨立且受配額限制的 Key。字幕節錄與問題會離開瀏覽器並交由 Google 服務處理，請勿在未確認服務條款前上傳機敏內容。
 
+學生頁面右上角的「模型設定」可切換 Google AI Studio 與 CGU API。CGU 預設 endpoint 為 `https://air.cgu.edu.tw/cgullmapi/v1`，預設模型為 `gpt-oss-120b`；兩者皆使用參考專案採用的 Bearer Token 與 OpenAI-compatible `/models`、`/chat/completions` 介面。模型設定浮層提供讀取模型清單與清除 API Key。
+
 ## 已知限制
 
 - 影片必須允許嵌入；若 YouTube 拒絕嵌入，仍可使用外部開啟連結。

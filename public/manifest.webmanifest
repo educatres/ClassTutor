@@ -1,0 +1,22 @@
+{
+  "name": "ClassTutor 課堂影片 AI 助教",
+  "short_name": "ClassTutor",
+  "description": "匯入課程包、觀看字幕並使用 AI 課堂助教。",
+  "lang": "zh-Hant",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f4f7f2",
+  "theme_color": "#12796d",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

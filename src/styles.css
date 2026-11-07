@@ -49,3 +49,16 @@ footer { display: flex; justify-content: space-between; color: #829089; font-siz
 .student-shell .video-column, .student-shell .video-card, .student-shell .video-card .player-wrap { background: #000; }.student-shell .video-card .player-wrap { height: 100%; min-height: 0; }.student-shell .video-card { overflow: hidden; }.student-shell .video-card .error-text { padding: 10px 14px; margin: 0; background: #000; }
 .student-shell .topbar .toolbar-toggle, .student-shell .toolbar-reveal { display: none; }.toolbar-inline-toggle { order: 3; background: #edf4ef !important; color: var(--teal-dark) !important; }.mode-switch button:nth-child(3) { order: 4; }
 .player-wrap { position: relative; }.subtitle-overlay { position: absolute; z-index: 3; left: 4%; right: 4%; bottom: 8%; color: #fff; background: rgba(0, 0, 0, .72); border-radius: 6px; padding: 8px 14px; text-align: center; font-size: clamp(15px, 1.8vw, 24px); font-weight: 600; line-height: 1.55; white-space: pre-line; text-shadow: 0 1px 2px rgba(0, 0, 0, .8); pointer-events: none; }
+.student-shell .topbar { margin-bottom: 0; padding: 5px clamp(16px, 3vw, 42px); align-items: center; }
+.student-shell .topbar h1 { font-size: clamp(12px, 1.5vw, 17px); letter-spacing: -.03em; }
+.student-shell .topbar-actions { gap: 6px; }
+.student-shell .status-pill, .student-shell .header-action, .student-shell .toolbar-toggle, .student-shell .settings-toggle { padding: 6px 8px !important; font-size: 11px !important; }
+.student-shell .teacher-link { padding: 6px 8px; font-size: 11px; }
+.student-shell .quick-prompts button { background: #c8e3cc; color: #185c37; border-color: #afd2b7; font-weight: 400; }
+.student-shell .quick-prompts button:hover:not(:disabled) { background: #b9dabb; }
+
+@media (min-width: 901px) {
+  .student-shell { height: 100vh; overflow: hidden; }
+  .student-shell .tutor-layout { height: calc(100vh - 44px); min-height: 0; grid-template-columns: minmax(0, 1fr) 380px; }
+  .student-shell .splitter { display: none; }
+}

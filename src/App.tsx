@@ -9,6 +9,43 @@ import { getEligibleCues, retrieveSources } from './services/retrieval'
 import { readCoursePackage } from './services/coursePackage'
 import { createYouTubePlayer, type YouTubePlayer, youtubeUrl } from './services/youtube'
 
+const API_KEY_STORAGE = 'video-ai-tutor.api-keys.v1'
+const API_KEY_TTL_MS = 24 * 60 * 60 * 1000
+const QUICK_PROMPTS = ['幫我整理這一段', '給我一個例子', '這段有哪些重點？', '前一步在做什麼？']
+
+type StoredApiKeys = Partial<Record<AIProvider, { apiKey: string; expiresAt: number }>>
+function readStoredApiKey(provider: AIProvider) {
+  try {
+    const raw = localStorage.getItem(API_KEY_STORAGE)
+    const saved = raw ? JSON.parse(raw) as StoredApiKeys : {}
+    const item = saved[provider]
+    if (!item || item.expiresAt <= Date.now()) {
+      if (item) { delete saved[provider]; localStorage.setItem(API_KEY_STORAGE, JSON.stringify(saved)) }
+      return ''
+    }
+    return item.apiKey
+  } catch { return '' }
+}
+
+function saveApiKey(provider: AIProvider, apiKey: string) {
+  try {
+    const raw = localStorage.getItem(API_KEY_STORAGE)
+    const saved = raw ? JSON.parse(raw) as StoredApiKeys : {}
+    if (apiKey.trim()) saved[provider] = { apiKey, expiresAt: Date.now() + API_KEY_TTL_MS }
+    else delete saved[provider]
+    localStorage.setItem(API_KEY_STORAGE, JSON.stringify(saved))
+  } catch { /* private browsing or blocked storage: keep the key in memory only */ }
+}
+
+function clearStoredApiKey(provider: AIProvider) {
+  try {
+    const raw = localStorage.getItem(API_KEY_STORAGE)
+    const saved = raw ? JSON.parse(raw) as StoredApiKeys : {}
+    delete saved[provider]
+    localStorage.setItem(API_KEY_STORAGE, JSON.stringify(saved))
+  } catch { /* ignore blocked storage */ }
+}
+
 const fmt = (seconds: number) => {
   if (!Number.isFinite(seconds) || seconds < 0) return '--:--'
   const total = Math.floor(seconds)
@@ -28,7 +65,7 @@ function statusLabel(key: string, videoId: string | null, transcript: Transcript
 
 export default function App() {
   const [provider, setProvider] = useState<AIProvider>('google')
-  const [apiKey, setApiKey] = useState('')
+  const [apiKey, setApiKey] = useState(() => readStoredApiKey('google'))
   const [showKey, setShowKey] = useState(false)
   const [modelId, setModelId] = useState(DEFAULT_GEMINI_MODEL)
   const [modelOptions, setModelOptions] = useState<string[]>([])
@@ -53,6 +90,8 @@ export default function App() {
 
   const chunks = useMemo(() => transcript ? buildChunks(transcript.cues) : [], [transcript])
   const appStatus = statusLabel(apiKey, videoId, transcript, playerReady, asking)
+
+  useEffect(() => { saveApiKey(provider, apiKey) }, [provider, apiKey])
 
   useEffect(() => {
     if (!videoId || !playerHost.current) return
@@ -92,10 +131,10 @@ export default function App() {
   const onDrop = (event: DragEvent<HTMLDivElement>) => { event.preventDefault(); setDragging(false); void importCoursePackage(event.dataTransfer.files?.[0]) }
 
   const changeProvider = (next: AIProvider) => {
-    setProvider(next); setApiKey(''); setModelOptions([]); setConnection({ kind: 'idle', message: '' }); setModelId(next === 'cgu' ? CGU_DEFAULT_MODEL : DEFAULT_GEMINI_MODEL)
+    setProvider(next); setApiKey(readStoredApiKey(next)); setModelOptions([]); setConnection({ kind: 'idle', message: '' }); setModelId(next === 'cgu' ? CGU_DEFAULT_MODEL : DEFAULT_GEMINI_MODEL)
   }
 
-  const clearApiKey = () => { setApiKey(''); setConnection({ kind: 'idle', message: '' }); setNotice(`${provider === 'cgu' ? 'CGU' : 'Google AI Studio'} API Key 已清除。`) }
+  const clearApiKey = () => { clearStoredApiKey(provider); setApiKey(''); setConnection({ kind: 'idle', message: '' }); setNotice(`${provider === 'cgu' ? 'CGU' : 'Google AI Studio'} API Key 已清除。`) }
 
   const testConnection = async () => {
     setConnection({ kind: 'working', message: '正在測試模型連線…' })
@@ -141,14 +180,13 @@ export default function App() {
       <section className="left-column">
         <article className="card setup-card course-package-card">
           <div className="section-heading"><div><h2>上傳課程包</h2><p>請向老師取得 `.vait` 課程包；影片網址與字幕會自動載入，不需要在學生端貼上 YouTube 網址。</p></div></div>
-          <div className={`drop-zone ${dragging ? 'dragging' : ''}`} onDragOver={(e) => { e.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={onDrop} onClick={() => fileInput.current?.click()} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.current?.click() }}><strong>拖放課程包到這裡</strong><span>或點擊選擇 `.vait` 檔案</span><input ref={fileInput} type="file" accept=".vait,application/octet-stream" onChange={onFileChange} /></div>
-          {transcript && <p className="package-loaded" role="status">已載入：{transcript.fileName} · {transcript.cueCount} 段字幕{videoId ? ' · YouTube 影片已就緒' : ''}</p>}
+          {!transcript ? <div className={`drop-zone ${dragging ? 'dragging' : ''}`} onDragOver={(e) => { e.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={onDrop} onClick={() => fileInput.current?.click()} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.current?.click() }}><strong>拖放課程包到這裡</strong><span>或點擊選擇 `.vait` 檔案</span><input ref={fileInput} type="file" accept=".vait,application/octet-stream" onChange={onFileChange} /></div> : <div className="package-loaded package-loaded-expanded" role="status"><span>已載入：{transcript.fileName} · {transcript.cueCount} 段字幕{videoId ? ' · YouTube 影片已就緒' : ''}</span><button className="secondary-button" onClick={() => window.open('./', '_blank', 'noopener,noreferrer')}>上傳其他課程包</button></div>}
           {videoError && <p className="error-text" role="alert">{videoError} {videoId && <a href={youtubeUrl(videoId)} target="_blank" rel="noreferrer">在 YouTube 開啟</a>}</p>}
         </article>
         <article className="card video-card"><div className="player-wrap">{videoId ? <div ref={playerHost} className="youtube-host" /> : <div className="empty-player"><span>▶</span><p>匯入課程包後，影片會顯示在這裡</p></div>}</div><div className="time-row"><strong>{fmt(currentTime)}</strong><span>/ {fmt(duration)}</span><span className="time-hint">字幕時間直接對應影片時間</span></div></article>
       </section>
       <aside className="right-column">
-        <article className="card chat-card"><div className="chat-header"><div><h2>AI 課堂助教</h2><p>每次提問都會鎖定送出當下的播放時間。</p></div><div className="mode-switch" role="group" aria-label="問答模式"><button className={mode === 'progress' ? 'selected' : ''} onClick={() => setMode('progress')}>跟著進度學習</button><button className={mode === 'review' ? 'selected' : ''} onClick={() => setMode('review')}>全課複習</button></div></div><div className="mode-note">{mode === 'progress' ? '只使用已完整播出的字幕（cue.end ≤ 目前時間）' : '使用整份已匯入字幕，適合課後複習'}</div><div className="messages" aria-live="polite">{chat.length === 0 && <div className="chat-empty"><span>✦</span><p>播放影片、匯入字幕後，問我課堂中已經講過的內容。</p></div>}{chat.map((message) => <div className={`message ${message.role} ${message.status === 'error' ? 'message-error' : ''}`} key={message.id}><div className="message-meta">{message.role === 'user' ? '你' : 'AI 助教'} · {message.mode === 'progress' ? '跟著進度' : '全課複習'} · {fmt(message.cutoffSeconds)}</div><p>{message.text}</p>{message.citations && message.citations.length > 0 && <div className="citations">{message.citations.map((citation) => <div className="citation" key={citation.chunkId}><button onClick={() => jumpTo(citation.start)}>▶ {fmt(citation.start)}</button><span>{citation.excerpt}</span><a href={videoId ? youtubeUrl(videoId, citation.start) : '#'} target="_blank" rel="noreferrer">YouTube ↗</a></div>)}</div>}{message.role === 'assistant' && message.status === 'done' && (!message.citations || message.citations.length === 0) && <p className="unverified">回答沒有可驗證的字幕來源。</p>}</div>)}</div><div className="ask-form"><textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={appStatus === 'READY' ? '例如：老師如何解釋這個概念？' : '完成左側設定後即可提問'} disabled={asking} rows={3} onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void submitQuestion() } }} /><button onClick={() => void submitQuestion()} disabled={asking || !question.trim()}>{asking ? '回答中…' : '送出'}</button></div>{asking && <button className="cancel-button" onClick={() => abortRef.current?.abort()}>取消這次提問</button>}{notice && <p className="notice" role="status">{notice}</p>}</article>
+        <article className="card chat-card"><div className="chat-header"><div><h2>AI 課堂助教</h2><p>每次提問都會鎖定送出當下的播放時間。</p></div><div className="mode-switch" role="group" aria-label="問答模式"><button className={mode === 'progress' ? 'selected' : ''} onClick={() => setMode('progress')}>跟著進度學習</button><button className={mode === 'review' ? 'selected' : ''} onClick={() => setMode('review')}>全課複習</button></div></div><div className="mode-note">{mode === 'progress' ? '只使用已完整播出的字幕（cue.end ≤ 目前時間）' : '使用整份已匯入字幕，適合課後複習'}</div><div className="messages" aria-live="polite">{chat.length === 0 && <div className="chat-empty"><span>✦</span><p>播放影片、匯入字幕後，問我課堂中已經講過的內容。</p></div>}{chat.map((message) => <div className={`message ${message.role} ${message.status === 'error' ? 'message-error' : ''}`} key={message.id}><div className="message-meta">{message.role === 'user' ? '你' : 'AI 助教'} · {message.mode === 'progress' ? '跟著進度' : '全課複習'} · {fmt(message.cutoffSeconds)}</div><p>{message.text}</p>{message.citations && message.citations.length > 0 && <div className="citations">{message.citations.map((citation) => <div className="citation" key={citation.chunkId}><button onClick={() => jumpTo(citation.start)}>▶ {fmt(citation.start)}</button><span>{citation.excerpt}</span><a href={videoId ? youtubeUrl(videoId, citation.start) : '#'} target="_blank" rel="noreferrer">YouTube ↗</a></div>)}</div>}{message.role === 'assistant' && message.status === 'done' && (!message.citations || message.citations.length === 0) && <p className="unverified">回答沒有可驗證的字幕來源。</p>}</div>)}</div><div className="quick-prompts" aria-label="快速提問">{QUICK_PROMPTS.map((prompt) => <button key={prompt} onClick={() => setQuestion(prompt)} disabled={asking}>{prompt}</button>)}</div><div className="ask-form"><textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={appStatus === 'READY' ? '例如：老師如何解釋這個概念？' : '完成左側設定後即可提問'} disabled={asking} rows={3} onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void submitQuestion() } }} /><button onClick={() => void submitQuestion()} disabled={asking || !question.trim()}>{asking ? '回答中…' : '送出'}</button></div>{asking && <button className="cancel-button" onClick={() => abortRef.current?.abort()}>取消這次提問</button>}{notice && <p className="notice" role="status">{notice}</p>}</article>
       </aside>
     </main>
     <footer><span><a href="./teacher.html">老師課程包工具</a></span></footer>

@@ -183,6 +183,7 @@ export default function App() {
   const [modelOptions, setModelOptions] = useState<string[]>([])
   const [connection, setConnection] = useState<{ kind: 'idle' | 'working' | 'ok' | 'error'; message: string }>({ kind: 'idle', message: '' })
   const [videoId, setVideoId] = useState<string | null>(null)
+  const [videoTitle, setVideoTitle] = useState('')
   const [videoError, setVideoError] = useState('')
   const [playerReady, setPlayerReady] = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -259,10 +260,11 @@ export default function App() {
   const printNotes = () => {
     const printWindow = window.open('', '_blank', 'width=900,height=1000')
     if (!printWindow) { setNotice('瀏覽器封鎖了列印視窗，請允許彈出視窗後再試。'); return }
+    const printTitle = escapeHtml(videoTitle.trim() || '影片標題')
     const noteHtml = notes.map((note) => `<article class="note"><h2>對話筆記</h2><p>${escapeHtml(note.text).replace(/\r?\n/g, '<br>')}</p></article>`).join('')
     const screenshotHtml = screenshots.map((shot) => `<figure class="screenshot"><img src="${shot.dataUrl}" alt="筆記截圖"><figcaption>${shot.time === null ? '截圖' : `影片時間 ${fmt(shot.time)}`}</figcaption>${shot.text.trim() ? `<p>${escapeHtml(shot.text).replace(/\r?\n/g, '<br>')}</p>` : ''}</figure>`).join('')
     const freeHtml = freeNote.trim() ? `<article class="note"><h2>其他筆記</h2><p>${escapeHtml(freeNote).replace(/\r?\n/g, '<br>')}</p></article>` : ''
-    printWindow.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>影片標題</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:"Noto Sans TC",Arial,sans-serif;color:#172321;line-height:1.7;margin:0}.page{max-width:180mm;margin:0 auto}h1{font-size:22px;margin:0 0 18px;border-bottom:2px solid #12796d;padding-bottom:8px}.note{break-inside:avoid;border:1px solid #dce5de;border-radius:8px;padding:12px 14px;margin:0 0 14px}.note h2{font-size:15px;color:#0b5c53;margin:0 0 7px}.note p{font-size:12px;margin:0;white-space:normal}.screenshot{break-inside:avoid;margin:0 0 16px}.screenshot img{display:block;max-width:100%;max-height:100mm;margin:0 auto;border:1px solid #dce5de}.screenshot figcaption{font-size:11px;color:#687771;text-align:center;margin-top:4px}</style></head><body><main class="page"><h1>影片標題</h1>${noteHtml}${freeHtml}${screenshotHtml}</main></body></html>`)
+    printWindow.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>${printTitle}</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:"Noto Sans TC",Arial,sans-serif;color:#172321;line-height:1.7;margin:0}.page{max-width:180mm;margin:0 auto}h1{font-size:22px;margin:0 0 18px;border-bottom:2px solid #12796d;padding-bottom:8px}.note{break-inside:avoid;border:1px solid #dce5de;border-radius:8px;padding:12px 14px;margin:0 0 14px}.note h2{font-size:15px;color:#0b5c53;margin:0 0 7px}.note p{font-size:12px;margin:0;white-space:normal}.screenshot{break-inside:avoid;margin:0 0 16px}.screenshot img{display:block;max-width:100%;max-height:100mm;margin:0 auto;border:1px solid #dce5de}.screenshot figcaption{font-size:11px;color:#687771;text-align:center;margin-top:4px}</style></head><body><main class="page"><h1>${printTitle}</h1>${noteHtml}${freeHtml}${screenshotHtml}</main></body></html>`)
     printWindow.document.close()
     printWindow.focus()
     window.setTimeout(() => printWindow.print(), 250)
@@ -310,7 +312,7 @@ export default function App() {
     const mount = document.createElement('div')
     host.appendChild(mount)
     createYouTubePlayer(mount, videoId, {
-      onReady: (instance) => { if (!disposed) { player.current = instance; setPlayerReady(true); setCurrentTime(instance.getCurrentTime()) } },
+      onReady: (instance) => { if (!disposed) { player.current = instance; setVideoTitle(instance.getVideoData?.()?.title?.trim() ?? ''); setPlayerReady(true); setCurrentTime(instance.getCurrentTime()) } },
       onStateChange: () => { if (!disposed && player.current) setCurrentTime(player.current.getCurrentTime()) },
       onError: (code) => { if (!disposed) setVideoError(`YouTube 播放器錯誤（${code}）。影片可能不允許嵌入，請改用外部開啟。`) },
     }).catch((error: unknown) => { if (!disposed) setVideoError(error instanceof Error ? error.message : 'YouTube 播放器載入失敗。') })
@@ -328,7 +330,7 @@ export default function App() {
     if ((videoId || transcript || chat.length) && !window.confirm('匯入新課程包會清除目前影片與對話，是否繼續？')) return
     try {
       const course = await readCoursePackage(file)
-      setVideoError(''); setVideoId(course.videoId); setTranscript(course.transcript); setChat([]); setNotes([]); setFreeNote(''); setScreenshots([]); setPlayerReady(false); setCurrentTime(0); setShowSubtitles(false); setNotice(`已載入課程包：${course.transcript.fileName} · ${course.transcript.cueCount} 段字幕。`)
+      setVideoError(''); setVideoId(course.videoId); setVideoTitle(''); setTranscript(course.transcript); setChat([]); setNotes([]); setFreeNote(''); setScreenshots([]); setPlayerReady(false); setCurrentTime(0); setShowSubtitles(false); setNotice(`已載入課程包：${course.transcript.fileName} · ${course.transcript.cueCount} 段字幕。`)
     } catch (error: unknown) { setNotice(error instanceof Error ? error.message : '課程包匯入失敗。') }
   }
 

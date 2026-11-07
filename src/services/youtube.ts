@@ -24,6 +24,7 @@ export function youtubeUrl(videoId: string, seconds?: number) {
 
 export type YouTubePlayer = {
   getCurrentTime: () => number
+  getVideoData?: () => { title?: string }
   seekTo: (seconds: number, allowSeekAhead: boolean) => void
   destroy?: () => void
 }

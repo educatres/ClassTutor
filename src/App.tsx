@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ChangeEvent, ReactNode } from 'react'
+import type { ChangeEvent, PointerEvent as ReactPointerEvent, ReactNode } from 'react'
 import type { ChatMessage, Citation, TranscriptDocument, TutorMode } from './types'
 import { buildChunks } from './services/chunker'
 import { makeCitationCards } from './services/citationValidator'
@@ -16,6 +16,7 @@ type ColumnRatio = '3:1' | '1:1' | '1:2' | '1:3'
 const COLUMN_RATIO_COLUMNS: Record<ColumnRatio, string> = { '3:1': '3fr 1fr', '1:1': '1fr 1fr', '1:2': '1fr 2fr', '1:3': '1fr 3fr' }
 
 type StoredApiKeys = Partial<Record<AIProvider, { apiKey: string; expiresAt: number }>>
+type ConversationNote = { id: string; assistantId: string; userMessageId: string; text: string }
 function readStoredApiKey(provider: AIProvider) {
   try {
     const raw = localStorage.getItem(API_KEY_STORAGE)
@@ -141,16 +142,65 @@ export default function App() {
   const [toolbarHidden, setToolbarHidden] = useState(false)
   const [showSubtitles, setShowSubtitles] = useState(false)
   const [columnRatio, setColumnRatio] = useState<ColumnRatio>('3:1')
+  const [notesOpen, setNotesOpen] = useState(false)
+  const [notes, setNotes] = useState<ConversationNote[]>([])
+  const [freeNote, setFreeNote] = useState('')
+  const [notesPosition, setNotesPosition] = useState(() => ({ x: Math.max(16, (typeof window === 'undefined' ? 1000 : window.innerWidth) - 390), y: 72 }))
+  const [notesDragging, setNotesDragging] = useState(false)
   const playerHost = useRef<HTMLDivElement>(null)
   const player = useRef<YouTubePlayer | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const notesPanelRef = useRef<HTMLElement>(null)
+  const noteDragOffset = useRef({ x: 0, y: 0 })
+  const messageRefs = useRef(new Map<string, HTMLDivElement>())
 
   const chunks = useMemo(() => transcript ? buildChunks(transcript.cues) : [], [transcript])
   const currentSubtitle = useMemo(() => transcript?.cues.filter((cue) => currentTime >= cue.start && currentTime < cue.end).map((cue) => cue.text).join('\n') ?? '', [transcript, currentTime])
   const appStatus = statusLabel(apiKey, videoId, transcript, playerReady, asking)
 
   useEffect(() => { saveApiKey(provider, apiKey) }, [provider, apiKey])
+
+  useEffect(() => {
+    if (!notesDragging) return
+    const onMove = (event: PointerEvent) => {
+      const panel = notesPanelRef.current?.getBoundingClientRect()
+      const width = panel?.width ?? 340
+      const height = panel?.height ?? 420
+      setNotesPosition({ x: Math.max(8, Math.min(window.innerWidth - width - 8, event.clientX - noteDragOffset.current.x)), y: Math.max(8, Math.min(window.innerHeight - height - 8, event.clientY - noteDragOffset.current.y)) })
+    }
+    const onUp = () => setNotesDragging(false)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp) }
+  }, [notesDragging])
+
+  const startNotesDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest('button')) return
+    const rect = notesPanelRef.current?.getBoundingClientRect()
+    if (!rect) return
+    noteDragOffset.current = { x: event.clientX - rect.left, y: event.clientY - rect.top }
+    setNotesDragging(true)
+  }
+
+  const updateNote = (noteId: string, text: string) => setNotes((items) => items.map((item) => item.id === noteId ? { ...item, text } : item))
+  const hasNote = (assistantId: string) => notes.some((note) => note.assistantId === assistantId)
+  const toggleConversationNote = (assistantId: string) => {
+    setNotes((items) => {
+      const existing = items.find((note) => note.assistantId === assistantId)
+      if (existing) return items.filter((note) => note.id !== existing.id)
+      const assistantIndex = chat.findIndex((message) => message.id === assistantId)
+      const assistant = assistantIndex >= 0 ? chat[assistantIndex] : undefined
+      const user = assistantIndex > 0 ? chat[assistantIndex - 1] : undefined
+      if (!assistant || !user || user.role !== 'user') return items
+      return [...items, { id: crypto.randomUUID(), assistantId, userMessageId: user.id, text: `問題：${user.text}\n\n回答：${assistant.text}` }]
+    })
+  }
+  const jumpToConversation = (userMessageId: string) => {
+    const element = messageRefs.current.get(userMessageId)
+    if (!element) return
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   useEffect(() => {
     if (!videoId || !playerHost.current) return
@@ -178,7 +228,7 @@ export default function App() {
     if ((videoId || transcript || chat.length) && !window.confirm('匯入新課程包會清除目前影片與對話，是否繼續？')) return
     try {
       const course = await readCoursePackage(file)
-      setVideoError(''); setVideoId(course.videoId); setTranscript(course.transcript); setChat([]); setPlayerReady(false); setCurrentTime(0); setShowSubtitles(false); setNotice(`已載入課程包：${course.transcript.fileName} · ${course.transcript.cueCount} 段字幕。`)
+      setVideoError(''); setVideoId(course.videoId); setTranscript(course.transcript); setChat([]); setNotes([]); setFreeNote(''); setPlayerReady(false); setCurrentTime(0); setShowSubtitles(false); setNotice(`已載入課程包：${course.transcript.fileName} · ${course.transcript.cueCount} 段字幕。`)
     } catch (error: unknown) { setNotice(error instanceof Error ? error.message : '課程包匯入失敗。') }
   }
 
@@ -230,12 +280,13 @@ export default function App() {
     <input ref={fileInput} className="visually-hidden-input" type="file" accept=".vait,application/octet-stream" onChange={onFileChange} />
     {!toolbarHidden ? <header className="topbar"><div><h1>ClassTutor 課堂影片 AI 助教</h1></div><div className="topbar-actions"><span className={`status-pill ${appStatus.toLowerCase()}`}>{appStatus}</span><button className="header-action" onClick={() => fileInput.current?.click()}>上傳課程包</button>{transcript && <button className="header-action" onClick={() => window.open('./', '_blank', 'noopener,noreferrer')}>上傳其他課程包</button>}<a className="teacher-link" href="./teacher.html">老師課程包工具</a><button className="settings-toggle" onClick={() => setSettingsOpen(true)}>AI模型設定</button><button className="toolbar-toggle" onClick={() => setToolbarHidden(true)}>隱藏工具列</button></div></header> : <button className="toolbar-reveal" onClick={() => setToolbarHidden(false)}>顯示工具列</button>}
     {settingsOpen && <div className="settings-overlay" role="presentation"><section className="card settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="section-heading"><div><h2 id="settings-title">AI模型設定</h2><p>API Key 會保存在本機瀏覽器，保存期限 1 天；重新整理後仍可沿用。</p></div><button className="close-button" onClick={() => setSettingsOpen(false)} aria-label="關閉模型設定">×</button></div><label htmlFor="provider">API Provider</label><select id="provider" value={provider} onChange={(e) => changeProvider(e.target.value as AIProvider)}><option value="google">Google AI Studio</option><option value="cgu">CGU API</option></select><label htmlFor="api-key">{provider === 'cgu' ? 'CGU API Key' : 'Google AI Studio API Key'}</label><div className="key-input"><input id="api-key" type={showKey ? 'text' : 'password'} value={apiKey} onChange={(e) => { setApiKey(e.target.value); setConnection({ kind: 'idle', message: '' }) }} placeholder="貼上你的 API Key" autoComplete="off" /><button className="icon-button" onClick={() => setShowKey((value) => !value)} aria-label={showKey ? '隱藏金鑰' : '顯示金鑰'}>{showKey ? '隱藏' : '顯示'}</button></div><div className="model-row"><label htmlFor="model-id">模型 ID</label><input id="model-id" value={modelId} onChange={(e) => setModelId(e.target.value)} list="model-options" /><datalist id="model-options">{modelOptions.map((model) => <option value={model} key={model} />)}</datalist></div><div className="button-row"><button onClick={testConnection} disabled={connection.kind === 'working' || !apiKey.trim()}>{connection.kind === 'working' ? '測試中…' : '測試連線'}</button><button className="secondary-button" onClick={loadModels} disabled={!apiKey.trim()}>讀取模型清單</button><button className="danger-button" onClick={clearApiKey} disabled={!apiKey}>清除 API Key</button></div>{connection.message && <p className={connection.kind === 'error' ? 'error-text' : 'success-text'} role="status">{connection.message}</p>}<p className="privacy-note">目前 provider：{provider === 'cgu' ? 'CGU API（預設 OSS 120B）' : 'Google AI Studio（預設 gemini-flash-lite-latest）'}。API Key 保存期限為 24 小時。</p></section></div>}
+    {notesOpen && <aside ref={notesPanelRef} className={`notes-panel ${notesDragging ? 'is-dragging' : ''}`} style={{ left: notesPosition.x, top: notesPosition.y }}><div className="notes-panel-header" onPointerDown={startNotesDrag}><strong>筆記</strong><button className="notes-close" onClick={() => setNotesOpen(false)} aria-label="關閉筆記">×</button></div><div className="notes-panel-body">{notes.length === 0 && <p className="notes-empty">按下 AI 回覆右上角的愛心，即可將問答加入筆記。</p>}{notes.map((note) => <article className="conversation-note" key={note.id}><button className="conversation-note-link" onClick={() => jumpToConversation(note.userMessageId)}>對話筆記</button><textarea value={note.text} onChange={(event) => updateNote(note.id, event.target.value)} aria-label="編輯對話筆記" rows={6} /></article>)}<textarea className="free-note" value={freeNote} onChange={(event) => setFreeNote(event.target.value)} placeholder="可在此輸入其他筆記" aria-label="其他筆記" /></div></aside>}
     <main className="layout tutor-layout" style={{ gridTemplateColumns: COLUMN_RATIO_COLUMNS[columnRatio] }}>
       <section className="left-column video-column">
         <article className="video-card"><div id="video-player" className="player-wrap">{videoId ? <div ref={playerHost} className="youtube-host" /> : <div className="empty-player"><span>▶</span><p>使用上方「上傳課程包」開始學習</p></div>}{showSubtitles && currentSubtitle && <div className="subtitle-overlay" aria-live="polite">{currentSubtitle}</div>}</div>{videoError && <p className="error-text" role="alert">{videoError} {videoId && <a href={youtubeUrl(videoId)} target="_blank" rel="noreferrer">在 YouTube 開啟</a>}</p>}</article>
       </section>
       <aside className="right-column">
-        <article className="card chat-card"><div className="chat-header"><div className="mode-switch" role="group" aria-label="問答控制"><label className="subtitle-toggle"><input type="checkbox" checked={showSubtitles} onChange={(event) => setShowSubtitles(event.target.checked)} /><span>顯示字幕</span></label><label className="ratio-control"><span>影片／Chatbot</span><select value={columnRatio} onChange={(event) => setColumnRatio(event.target.value as ColumnRatio)} aria-label="影片與 Chatbot 欄位比例"><option value="3:1">3:1</option><option value="1:1">1:1</option><option value="1:2">1:2</option><option value="1:3">1:3</option></select></label><a href="#toolbar" className="toolbar-inline-toggle" onClick={(event) => { event.preventDefault(); setToolbarHidden((value) => !value) }}>{toolbarHidden ? '顯示工具列' : '隱藏工具列'}</a></div></div><div className="messages" aria-live="polite">{chat.length === 0 && <div className="chat-empty"><span>✦</span><p>播放影片、匯入字幕後，問我課堂中已經講過的內容。</p></div>}{chat.map((message) => <div className={`message ${message.role} ${message.status === 'error' ? 'message-error' : ''}`} key={message.id}><div className="message-meta">{message.role === 'user' ? '你' : 'AI 助教'} · {message.mode === 'progress' ? '跟著進度' : '全課複習'} · {fmt(message.cutoffSeconds)}</div><div className="markdown-content">{message.role === 'assistant' ? renderMarkdown(message.text, new Map((message.citations ?? []).map((citation) => [citation.chunkId, citation] as const)), jumpTo) : <p>{message.text}</p>}</div>{message.role === 'assistant' && message.status === 'done' && (!message.citations || message.citations.length === 0) && <p className="unverified">回答沒有可驗證的字幕來源。</p>}</div>)}</div><div className="quick-prompts" aria-label="快速提問">{QUICK_PROMPTS.map((prompt) => <button key={prompt} onClick={() => setQuestion(prompt)} disabled={asking}>{prompt}</button>)}</div><div className="ask-form"><textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="" disabled={asking} rows={3} onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void submitQuestion() } }} /><button onClick={() => void submitQuestion()} disabled={asking || !question.trim()}>{asking ? '回答中…' : '送出'}</button></div>{asking && <button className="cancel-button" onClick={() => abortRef.current?.abort()}>取消這次提問</button>}{notice && <p className="notice" role="status">{notice}</p>}</article>
+        <article className="card chat-card"><div className="chat-header"><div className="mode-switch" role="group" aria-label="問答控制"><label className="subtitle-toggle"><input type="checkbox" checked={showSubtitles} onChange={(event) => setShowSubtitles(event.target.checked)} /><span>顯示字幕</span></label><label className="ratio-control"><span>影片／Chatbot</span><select value={columnRatio} onChange={(event) => setColumnRatio(event.target.value as ColumnRatio)} aria-label="影片與 Chatbot 欄位比例"><option value="3:1">3:1</option><option value="1:1">1:1</option><option value="1:2">1:2</option><option value="1:3">1:3</option></select></label><a href="#notes" className="notes-toggle" onClick={(event) => { event.preventDefault(); setNotesOpen((value) => !value) }}>筆記</a><a href="#toolbar" className="toolbar-inline-toggle" onClick={(event) => { event.preventDefault(); setToolbarHidden((value) => !value) }}>{toolbarHidden ? '顯示工具列' : '隱藏工具列'}</a></div></div><div className="messages" aria-live="polite">{chat.length === 0 && <div className="chat-empty"><span>✦</span><p>播放影片、匯入字幕後，問我課堂中已經講過的內容。</p></div>}{chat.map((message) => <div ref={message.role === "user" ? (element) => { if (element) messageRefs.current.set(message.id, element); else messageRefs.current.delete(message.id) } : undefined} className={`message ${message.role} ${message.status === 'error' ? 'message-error' : ''}`} key={message.id}><div className="message-head"><div className="message-meta">{message.role === 'user' ? '你' : 'AI 助教'} · {message.mode === 'progress' ? '跟著進度' : '全課複習'} · {fmt(message.cutoffSeconds)}</div>{message.role === 'assistant' && <button className="favorite-button" onClick={() => toggleConversationNote(message.id)} aria-label={hasNote(message.id) ? '從筆記移除' : '加入筆記'}>{hasNote(message.id) ? '♥' : '♡'}</button>}</div><div className="markdown-content">{message.role === 'assistant' ? renderMarkdown(message.text, new Map((message.citations ?? []).map((citation) => [citation.chunkId, citation] as const)), jumpTo) : <p>{message.text}</p>}</div>{message.role === 'assistant' && message.status === 'done' && (!message.citations || message.citations.length === 0) && <p className="unverified">回答沒有可驗證的字幕來源。</p>}</div>)}</div><div className="quick-prompts" aria-label="快速提問">{QUICK_PROMPTS.map((prompt) => <button key={prompt} onClick={() => setQuestion(prompt)} disabled={asking}>{prompt}</button>)}</div><div className="ask-form"><textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="" disabled={asking} rows={3} onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void submitQuestion() } }} /><button onClick={() => void submitQuestion()} disabled={asking || !question.trim()}>{asking ? '回答中…' : '送出'}</button></div>{asking && <button className="cancel-button" onClick={() => abortRef.current?.abort()}>取消這次提問</button>}{notice && <p className="notice" role="status">{notice}</p>}</article>
       </aside>
     </main>
   </div>

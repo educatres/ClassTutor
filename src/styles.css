@@ -71,6 +71,22 @@ footer { display: flex; justify-content: space-between; color: #829089; font-siz
 .student-shell .ratio-control { display: inline-flex; align-items: center; gap: 5px; color: var(--teal-dark); font-size: 11px; line-height: 1; white-space: nowrap; }
 .student-shell .ratio-control select { width: auto; min-width: 54px; padding: 5px 7px; border-radius: 7px; font-size: 11px; color: var(--teal-dark); background: #fff; }
 .student-shell .toolbar-inline-toggle { order: 0; padding: 7px 8px; border-radius: 0; background: transparent !important; color: var(--teal-dark) !important; font-size: 11px; font-weight: 400; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.student-shell .notes-toggle { padding: 7px 8px; color: var(--teal-dark); font-size: 11px; line-height: 1; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.message-head { display: flex; align-items: start; justify-content: space-between; gap: 8px; }
+.message-head .message-meta { min-width: 0; }
+.favorite-button { flex: 0 0 auto; padding: 0 !important; border-radius: 0 !important; background: transparent !important; color: #c65e55 !important; font-size: 21px !important; font-weight: 400 !important; line-height: 1 !important; }
+.favorite-button:hover:not(:disabled) { background: transparent !important; color: #a63f38 !important; }
+.notes-panel { position: fixed; z-index: 60; display: flex; flex-direction: column; width: 360px; height: 460px; min-width: 260px; min-height: 220px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow: hidden; resize: both; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 55px rgba(22, 53, 42, .24); }
+.notes-panel.is-dragging { user-select: none; }
+.notes-panel-header { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; padding: 10px 12px; color: var(--teal-dark); background: #eef7f0; border-bottom: 1px solid var(--line); cursor: grab; }
+.notes-panel.is-dragging .notes-panel-header { cursor: grabbing; }
+.notes-close { padding: 0 !important; border-radius: 0 !important; background: transparent !important; color: var(--muted) !important; font-size: 22px !important; font-weight: 400 !important; line-height: 1 !important; }
+.notes-panel-body { flex: 1; min-height: 0; overflow: auto; display: grid; align-content: start; gap: 10px; padding: 12px; }
+.notes-empty { margin: 2px 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.conversation-note { display: grid; gap: 7px; padding: 10px; background: #f5faf5; border: 1px solid #dceadf; border-radius: 10px; }
+.conversation-note-link { justify-self: start; padding: 0 !important; border-radius: 0 !important; background: transparent !important; color: var(--teal-dark) !important; font-size: 11px !important; font-weight: 600 !important; text-decoration: underline; text-underline-offset: 3px; }
+.conversation-note textarea, .free-note { width: 100%; min-height: 120px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 12px; line-height: 1.6; resize: vertical; }
+.free-note { min-height: 110px; }
 @media (max-width: 1100px) {
   .student-shell .mode-switch { width: 100%; flex-wrap: wrap; }
   .student-shell .mode-switch button { flex: 1 1 calc(50% - 6px); min-width: 0; }

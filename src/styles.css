@@ -67,6 +67,9 @@ footer { display: flex; justify-content: space-between; color: #829089; font-siz
 .student-shell .quick-prompts button:hover:not(:disabled) { background: transparent !important; color: #0b5c53; }
 .student-shell .subtitle-toggle { display: inline-flex; align-items: center; gap: 5px; padding: 7px 8px; color: var(--teal-dark); font-size: 11px; line-height: 1; white-space: nowrap; cursor: pointer; }
 .student-shell .subtitle-toggle input { width: 14px; height: 14px; margin: 0; accent-color: var(--teal); cursor: pointer; }
+.student-shell .mode-switch { width: 100%; justify-content: space-between; align-items: center; gap: 8px; }
+.student-shell .ratio-control { display: inline-flex; align-items: center; gap: 5px; color: var(--teal-dark); font-size: 11px; line-height: 1; white-space: nowrap; }
+.student-shell .ratio-control select { width: auto; min-width: 54px; padding: 5px 7px; border-radius: 7px; font-size: 11px; color: var(--teal-dark); background: #fff; }
 .student-shell .toolbar-inline-toggle { order: 0; padding: 7px 8px; border-radius: 0; background: transparent !important; color: var(--teal-dark) !important; font-size: 11px; font-weight: 400; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 @media (max-width: 1100px) {
   .student-shell .mode-switch { width: 100%; flex-wrap: wrap; }

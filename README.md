@@ -49,3 +49,9 @@ Key 只會依使用者選擇保存在本機瀏覽器 `localStorage`，並在 24 
 - Gemini API、瀏覽器 CORS、模型權限與免費配額由 Google 服務政策決定；錯誤會顯示在畫面，不會偷偷切換模型或代理服務。
 - 字幕時間直接對應影片時間，本專案刻意不提供任何時間偏移、校正、重新對齊或校準功能。
 - 重新整理頁面會清除 API Key、字幕與對話。
+
+## 授權與作者
+
+除另有標示外，本專案內容採用 [Creative Commons 姓名標示 4.0 國際（CC BY 4.0）](https://creativecommons.org/licenses/by/4.0/deed.zh_TW) 授權。使用、修改或再散布時，請保留以下作者資訊：
+
+**作者：** [educatres](https://github.com/educatres)

@@ -98,3 +98,53 @@ footer { display: flex; justify-content: space-between; color: #829089; font-siz
   .student-shell .mode-switch { width: 100%; flex-wrap: wrap; }
   .student-shell .mode-switch button { flex: 1 1 calc(50% - 6px); min-width: 0; }
 }
+
+/* Student view: the controls live inside the chatbot and use the full viewport. */
+.student-shell .tutor-layout { height: 100vh; min-height: 0; }
+.student-shell .chat-card { padding: 0; }
+.student-shell .chat-header { display: block; margin: 0; padding: 0; }
+.student-shell .chat-toolbar { width: 100%; background: #eff4ef; border-bottom: 1px solid var(--line); }
+.student-shell .chat-toolbar-row { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 34px; padding: 3px 8px; }
+.student-shell .chat-toolbar-row-primary { border-bottom: 1px solid rgba(220, 229, 222, .75); }
+.student-shell .chat-toolbar-row > .status-pill { margin-right: auto; padding: 5px 8px; font-size: 10px; }
+.student-shell .chat-toolbar-row .header-action,
+.student-shell .chat-toolbar-row .settings-toggle,
+.student-shell .chat-toolbar-row .teacher-link { padding: 5px 7px !important; font-size: 10px !important; border-radius: 5px; white-space: nowrap; }
+.student-shell .chat-toolbar-row .settings-toggle { background: var(--ink) !important; color: #fff !important; }
+.student-shell .chat-toolbar-row-secondary { justify-content: flex-start; }
+.student-shell .chat-toolbar-row-secondary .subtitle-toggle,
+.student-shell .chat-toolbar-row-secondary .notes-toggle,
+.student-shell .chat-toolbar-row-secondary .toolbar-inline-toggle { padding: 5px 7px; }
+.student-shell .ratio-select { width: auto; min-width: 58px; padding: 4px 6px; border-radius: 4px; font-size: 10px; color: var(--teal-dark); background: #fff; }
+.student-shell .chat-toolbar-hidden-row { justify-content: flex-end; }
+.student-shell .messages,
+.student-shell .quick-prompts,
+.student-shell .ask-form,
+.student-shell .notice,
+.student-shell .cancel-button { margin-left: 12px; margin-right: 12px; }
+.student-shell .messages { padding-top: 12px; }
+.student-shell .ask-form { padding-top: 8px; }
+.student-shell .ask-form textarea { height: 38px; min-height: 38px; max-height: 38px; resize: none; border-radius: 0; padding: 8px 10px; }
+.student-shell .ask-form button { min-height: 38px; border-radius: 0; padding-top: 8px; padding-bottom: 8px; }
+.student-shell .quick-prompts { margin-bottom: 8px; }
+.student-shell .toolbar-inline-toggle { margin-left: auto; }
+
+@media (max-width: 1100px) {
+  .student-shell .chat-toolbar-row { flex-wrap: wrap; }
+  .student-shell .chat-toolbar-row-primary > .status-pill { margin-right: 0; }
+  .student-shell .chat-toolbar-row-secondary { justify-content: flex-start; }
+}
+
+@media (max-width: 900px) {
+  .student-shell .tutor-layout { height: auto; min-height: 0; }
+  .student-shell .tutor-layout .video-column { min-height: calc(100vh - 80px); }
+  .student-shell .tutor-layout .right-column { min-height: 620px; }
+  .student-shell .tutor-layout .chat-card { height: 620px; }
+}
+
+@media (max-width: 560px) {
+  .student-shell .chat-toolbar-row-primary > * { flex: 1 1 auto; }
+  .student-shell .chat-toolbar-row-primary > .status-pill { flex: 0 0 auto; }
+  .student-shell .chat-toolbar-row-secondary > * { flex: 0 0 auto; }
+  .student-shell .ask-form textarea { height: 38px; min-height: 38px; max-height: 38px; }
+}

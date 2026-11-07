@@ -80,6 +80,8 @@ footer { display: flex; justify-content: space-between; color: #829089; font-siz
 .notes-panel.is-dragging { user-select: none; }
 .notes-panel-header { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; padding: 10px 12px; color: var(--teal-dark); background: #eef7f0; border-bottom: 1px solid var(--line); cursor: grab; }
 .notes-panel.is-dragging .notes-panel-header { cursor: grabbing; }
+.notes-panel-actions { display: flex; align-items: center; gap: 9px; }
+.notes-action { padding: 0 !important; border-radius: 0 !important; background: transparent !important; color: var(--teal-dark) !important; font-size: 11px !important; font-weight: 500 !important; text-decoration: underline; text-underline-offset: 3px; }
 .notes-close { padding: 0 !important; border-radius: 0 !important; background: transparent !important; color: var(--muted) !important; font-size: 22px !important; font-weight: 400 !important; line-height: 1 !important; }
 .notes-panel-body { flex: 1; min-height: 0; overflow: auto; display: grid; align-content: start; gap: 10px; padding: 12px; }
 .notes-empty { margin: 2px 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
@@ -87,6 +89,18 @@ footer { display: flex; justify-content: space-between; color: #829089; font-siz
 .conversation-note-link { justify-self: start; padding: 0 !important; border-radius: 0 !important; background: transparent !important; color: var(--teal-dark) !important; font-size: 11px !important; font-weight: 600 !important; text-decoration: underline; text-underline-offset: 3px; }
 .conversation-note textarea, .free-note { width: 100%; min-height: 120px; padding: 8px 9px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 12px; line-height: 1.6; resize: vertical; }
 .free-note { min-height: 110px; }
+.note-screenshot { margin: 0; padding: 9px; background: #f5faf5; border: 1px solid #dceadf; border-radius: 10px; }
+.note-screenshot img { display: block; width: 100%; max-height: 180px; object-fit: contain; background: #172321; }
+.note-screenshot figcaption { margin-top: 6px; text-align: center; }
+.screenshot-jump { padding: 0 !important; border-radius: 0 !important; background: transparent !important; color: var(--teal-dark) !important; font-size: 11px !important; font-weight: 500 !important; text-decoration: underline; text-underline-offset: 3px; }
+.screenshot-overlay { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 20px; background: rgba(16, 35, 29, .66); }
+.screenshot-dialog { width: min(1100px, 96vw); max-height: 94vh; overflow: auto; padding: 18px; background: #fff; border-radius: 14px; box-shadow: 0 25px 80px rgba(0,0,0,.35); }
+.screenshot-dialog h2 { margin-bottom: 4px; }
+.screenshot-dialog p { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+.screenshot-stage { position: relative; display: inline-block; max-width: 100%; cursor: crosshair; background: #172321; line-height: 0; }
+.screenshot-source { display: block; max-width: 92vw; max-height: 70vh; object-fit: contain; }
+.screenshot-selection { position: absolute; border: 2px solid #fff; background: rgba(18, 121, 109, .22); box-shadow: 0 0 0 9999px rgba(0,0,0,.3); pointer-events: none; }
+.screenshot-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 @media (max-width: 1100px) {
   .student-shell .mode-switch { width: 100%; flex-wrap: wrap; }
   .student-shell .mode-switch button { flex: 1 1 calc(50% - 6px); min-width: 0; }

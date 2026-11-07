@@ -72,6 +72,7 @@ footer { display: flex; justify-content: space-between; color: #829089; font-siz
 .student-shell .ratio-control select { width: auto; min-width: 54px; padding: 5px 7px; border-radius: 7px; font-size: 11px; color: var(--teal-dark); background: #fff; }
 .student-shell .toolbar-inline-toggle { order: 0; padding: 7px 8px; border-radius: 0; background: transparent !important; color: var(--teal-dark) !important; font-size: 11px; font-weight: 400; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 .student-shell .notes-toggle { padding: 7px 8px; color: var(--teal-dark); font-size: 11px; line-height: 1; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
+.student-shell .screenshot-toolbar-button { padding: 7px 8px !important; border-radius: 0 !important; background: transparent !important; color: var(--teal-dark) !important; font-size: 11px !important; font-weight: 400 !important; text-decoration: underline; text-underline-offset: 3px; }
 .message-head { display: flex; align-items: start; justify-content: space-between; gap: 8px; }
 .message-head .message-meta { min-width: 0; }
 .favorite-button { flex: 0 0 auto; padding: 0 !important; border-radius: 0 !important; background: transparent !important; color: #c65e55 !important; font-size: 21px !important; font-weight: 400 !important; line-height: 1 !important; }

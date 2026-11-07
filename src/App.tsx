@@ -74,7 +74,10 @@ function renderInlineMarkdown(value: string, citations?: Map<string, Citation>, 
 }
 
 function renderMarkdown(value: string, citations?: Map<string, Citation>, onCitation?: (start: number) => void): ReactNode {
-  if (citations?.size && onCitation && ![...citations.keys()].some((id) => value.match(new RegExp(`\\[?${id.replace('_', '_?')}\\]?`, 'i')))) value = `${value.trimEnd()} ${[...citations.keys()].join(' ')}`
+  if (citations?.size && onCitation) {
+    if (![...citations.keys()].some((id) => value.match(new RegExp(`\\[?${id.replace('_', '_?')}\\]?`, 'i')))) value = `${value.trimEnd()} ${[...citations.keys()].join('、')}`
+    value = value.replace(/(\[?chunk_?\d{4}\]?)[\s,，、]+(?=\[?chunk_?\d{4}\]?)/gi, '$1、')
+  }
   const lines = value.split(/\r?\n/)
   const blocks: ReactNode[] = []
   let paragraph: string[] = []

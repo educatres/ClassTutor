@@ -21,7 +21,7 @@ async function request(path: string, options: RequestOptions, body: unknown) {
   options.signal?.addEventListener('abort', abortExternal, { once: true })
   let response: Response
   try {
-    response = await fetch(`${providerBaseUrl(provider)}${path}`, { method: 'POST', headers: { Authorization: `Bearer ${options.apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify(body), signal: controller.signal })
+    response = await fetch(`${providerBaseUrl(provider)}${path}`, { method: 'POST', headers: { Authorization: `Bearer ${options.apiKey.trim()}`, 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify(body), signal: controller.signal })
   } catch (error) {
     if (controller.signal.aborted && !options.signal?.aborted) throw new Error(`${providerName(provider)} 請求逾時（45 秒），請稍後重試。`)
     if (error instanceof TypeError) throw new Error(`無法連線到 ${providerName(provider)}，可能是網路或瀏覽器 CORS 限制。`)
@@ -34,11 +34,12 @@ async function request(path: string, options: RequestOptions, body: unknown) {
   let data: any = {}
   try { data = text ? JSON.parse(text) : {} } catch { /* sanitized below */ }
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) throw new Error(`${providerName(provider)} API Key 無效或沒有模型權限。`)
+    const apiMessage = typeof data?.error === 'string' ? data.error : data?.error?.message ?? data?.message ?? (typeof text === 'string' && text.trim() ? text.trim() : '')
+    if (response.status === 401 || response.status === 403 || (provider === 'grok' && response.status === 400 && /(?:api key|api_key|credential|authorization)/i.test(apiMessage))) throw new Error(`${providerName(provider)} API Key 無效或沒有模型權限。請確認使用的是 xAI Console 建立的 xai- API Key。`)
     if (response.status === 404) throw new Error(`找不到模型「${options.modelId}」，請檢查模型 ID。`)
     if (response.status === 429) throw new Error(`${providerName(provider)} 配額或速率限制已達上限，請稍後再試。`)
     if (response.status >= 500) throw new Error(`${providerName(provider)} 暫時無法服務，請稍後重試。`)
-    throw new Error(data?.error?.message || `API 請求失敗（HTTP ${response.status}）。`)
+    throw new Error(apiMessage || `API 請求失敗（HTTP ${response.status}）。`)
   }
   return data
 }
@@ -52,7 +53,7 @@ export async function testProviderConnection(provider: AIProvider, options: Requ
 export async function listProviderModels(provider: AIProvider, apiKey: string) {
   if (!apiKey.trim()) throw new Error(`請先輸入 ${providerName(provider)} API Key。`)
   let response: Response
-  try { response = await fetch(`${providerBaseUrl(provider)}/models`, { headers: { Authorization: `Bearer ${apiKey}` } }) }
+  try { response = await fetch(`${providerBaseUrl(provider)}/models`, { headers: { Authorization: `Bearer ${apiKey.trim()}`, Accept: 'application/json' } }) }
   catch (error) { if (error instanceof TypeError) throw new Error(`無法讀取 ${providerName(provider)} 模型清單，可能是網路或瀏覽器 CORS 限制。`); throw error }
   if (!response.ok) throw new Error(`無法讀取 ${providerName(provider)} 模型清單，請先確認 API Key。`)
   const body = await response.json() as any

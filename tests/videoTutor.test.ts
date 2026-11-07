@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseSrt, parseVtt } from '../src/services/subtitleParser'
+import { parseSbv, parseSrt, parseVtt } from '../src/services/subtitleParser'
 import { getEligibleCues, retrieveSources } from '../src/services/retrieval'
 import { parseYouTubeVideoId } from '../src/services/youtube'
 import { makeCitationCards, parseAIAnswer } from '../src/services/citationValidator'
@@ -18,6 +18,7 @@ describe('subtitle parsing and progress cutoff', () => {
   it('parses VTT and SRT timings', () => {
     expect(parseVtt(vtt)).toMatchObject([{ start: 0, end: 5, text: '第一段 & 概念' }, { start: 5, end: 12, text: '第二段' }])
     expect(parseSrt('9\r\n00:01:00,000 --> 00:01:02,500\r\n字幕內容')).toMatchObject([{ start: 60, end: 62.5, text: '字幕內容' }])
+    expect(parseSbv('0:00:00.000,0:00:02.500\nYouTube SBV 字幕\n\n0:00:02.500,0:00:04.000\n第二段')).toMatchObject([{ start: 0, end: 2.5, text: 'YouTube SBV 字幕' }, { start: 2.5, end: 4, text: '第二段' }])
   })
   it('never retrieves a cue whose end is after cutoff', () => {
     const cues = parseVtt(vtt)

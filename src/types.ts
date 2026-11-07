@@ -10,7 +10,7 @@ export type SubtitleCue = {
 
 export type TranscriptDocument = {
   fileName: string
-  format: 'vtt' | 'srt'
+  format: 'vtt' | 'srt' | 'sbv'
   cues: SubtitleCue[]
   cueCount: number
   earliestStart: number

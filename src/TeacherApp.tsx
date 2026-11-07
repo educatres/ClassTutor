@@ -15,7 +15,7 @@ export default function TeacherApp() {
   const chooseFile = (file?: File) => {
     setError(''); setNotice('')
     if (!file) return
-    if (!/\.(vtt|srt)$/i.test(file.name)) { setError('只支援 .vtt 或 .srt 字幕檔。'); return }
+    if (!/\.(vtt|srt|sbv)$/i.test(file.name)) { setError('只支援 .vtt、.srt 或 .sbv 字幕檔。'); return }
     setSubtitle(file)
   }
 
@@ -25,7 +25,7 @@ export default function TeacherApp() {
   const generate = async () => {
     setError(''); setNotice('')
     if (!parseYouTubeVideoId(videoUrl)) { setError('請輸入合法的 YouTube 影片網址。'); return }
-    if (!subtitle) { setError('請先上傳 VTT 或 SRT 字幕檔。'); return }
+    if (!subtitle) { setError('請先上傳 VTT、SRT 或 SBV 字幕檔。'); return }
     setWorking(true)
     try {
       const result = await createCoursePackage(videoUrl, subtitle)
@@ -43,7 +43,7 @@ export default function TeacherApp() {
         <label htmlFor="teacher-video-url">YouTube 影片網址</label>
         <input id="teacher-video-url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://www.youtube.com/watch?v=…" />
         <label>字幕檔案</label>
-        <div className={`drop-zone ${dragging ? 'dragging' : ''}`} onDragOver={(event) => { event.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={onDrop} onClick={() => fileInput.current?.click()} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') fileInput.current?.click() }}><strong>{subtitle ? subtitle.name : '拖放 VTT / SRT 到這裡'}</strong><span>{subtitle ? `${(subtitle.size / 1024).toFixed(1)} KiB · 已選取` : '或點擊選擇字幕檔（上限 10 MiB）'}</span><input ref={fileInput} type="file" accept=".vtt,.srt,text/vtt,application/x-subrip" onChange={onChange} /></div>
+        <div className={`drop-zone ${dragging ? 'dragging' : ''}`} onDragOver={(event) => { event.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={onDrop} onClick={() => fileInput.current?.click()} role="button" tabIndex={0} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') fileInput.current?.click() }}><strong>{subtitle ? subtitle.name : '拖放 VTT / SRT / SBV 到這裡'}</strong><span>{subtitle ? `${(subtitle.size / 1024).toFixed(1)} KiB · 已選取` : '或點擊選擇字幕檔（上限 10 MiB）'}</span><input ref={fileInput} type="file" accept=".vtt,.srt,.sbv,text/vtt,application/x-subrip" onChange={onChange} /></div>
         <button className="teacher-generate" onClick={() => void generate()} disabled={working}>{working ? '正在產生課程包…' : '產生並下載課程包'}</button>
         {error && <p className="error-text" role="alert">{error}</p>}
         {notice && <p className="success-text" role="status">{notice}</p>}

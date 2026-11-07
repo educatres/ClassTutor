@@ -46,7 +46,7 @@ export async function createCoursePackage(videoUrlInput: string, subtitleFile: F
 function isTranscript(value: unknown): value is TranscriptDocument {
   if (!value || typeof value !== 'object') return false
   const item = value as Partial<TranscriptDocument>
-  return (item.format === 'vtt' || item.format === 'srt') && typeof item.fileName === 'string' && Array.isArray(item.cues) && item.cues.length > 0
+  return (item.format === 'vtt' || item.format === 'srt' || item.format === 'sbv') && typeof item.fileName === 'string' && Array.isArray(item.cues) && item.cues.length > 0
     && item.cues.every((cue: unknown) => {
       if (!cue || typeof cue !== 'object') return false
       const item = cue as Partial<SubtitleCue>

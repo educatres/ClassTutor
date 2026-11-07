@@ -1,6 +1,6 @@
 # Video AI Tutor
 
-課堂影片時間感知 AI 助教：在瀏覽器載入 YouTube 影片與 Teams `.vtt`／YouTube `.srt` 字幕，依目前播放進度檢索字幕，再由使用者自己的 Google AI Studio Key 提問。
+課堂影片時間感知 AI 助教：在瀏覽器載入 YouTube 影片與 Teams `.vtt`／YouTube `.srt`／`.sbv` 字幕，依目前播放進度檢索字幕，再由使用者自己的 Google AI Studio Key 提問。
 
 ## 開發
 
@@ -17,7 +17,7 @@ npm run build
 
 ### 老師端
 
-開啟 [`teacher.html`](https://educatres.github.io/ClassTutor/teacher.html)，貼入支援 `youtube.com/watch`、`youtu.be`、`embed`、`shorts` 的 YouTube 影片網址，再上傳與影片時間一致的 `.vtt` 或 `.srt` 字幕。按下「產生並下載課程包」後，將 `.vait` 檔案提供給學生。
+開啟 [`teacher.html`](https://educatres.github.io/ClassTutor/teacher.html)，貼入支援 `youtube.com/watch`、`youtu.be`、`embed`、`shorts` 的 YouTube 影片網址，再上傳與影片時間一致的 `.vtt`、`.srt` 或 YouTube `.sbv` 字幕。按下「產生並下載課程包」後，將 `.vait` 檔案提供給學生。
 
 課程包在瀏覽器內使用固定應用程式金鑰做 AES-GCM 基本加密，主要用來避免直接修改內容，不是機密資料保護；請勿放入未授權的敏感教材。
 

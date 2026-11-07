@@ -1,13 +1,13 @@
 import type { SubtitleCue, TranscriptDocument } from '../types'
 
-const TIME = /^(?:(\d+):)?(\d{1,2}):(\d{2})[.,](\d{3})$/
+const TIME = /^(?:(\d+):)?(\d{1,2}):(\d{2})(?:[.,](\d{1,3}))?$/
 function parseTime(value: string) {
   const match = value.trim().match(TIME)
   if (!match) return null
   const hours = Number(match[1] ?? 0)
   const minutes = Number(match[2])
   const seconds = Number(match[3])
-  const millis = Number(match[4])
+  const millis = Number((match[4] ?? '').padEnd(3, '0') || 0)
   if (minutes >= 60 || seconds >= 60) return null
   return hours * 3600 + minutes * 60 + seconds + millis / 1000
 }
@@ -77,14 +77,36 @@ export function parseSrt(source: string): SubtitleCue[] {
   return finalizeCues(cues)
 }
 
+/** YouTube SBV uses `H:MM:SS.mmm,H:MM:SS.mmm` cue timing lines. */
+export function parseSbv(source: string): SubtitleCue[] {
+  const lines = source.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n').split('\n')
+  const cues: SubtitleCue[] = []
+  let i = 0
+  while (i < lines.length) {
+    const timing = lines[i].trim()
+    if (!timing.includes(',')) { i += 1; continue }
+    const parts = timing.split(',').map((part) => part.trim())
+    if (parts.length !== 2) { i += 1; continue }
+    const start = parseTime(parts[0]); const end = parseTime(parts[1])
+    if (start === null || end === null) { i += 1; continue }
+    const text: string[] = []
+    i += 1
+    while (i < lines.length && lines[i].trim() && !lines[i].includes(',')) { text.push(lines[i]); i += 1 }
+    const cue = makeCue(start, end, text, cues.length + 1)
+    if (cue) cues.push(cue)
+    while (i < lines.length && !lines[i].trim()) i += 1
+  }
+  return finalizeCues(cues)
+}
+
 export async function parseSubtitleFile(file: File): Promise<TranscriptDocument> {
   if (file.size > 10 * 1024 * 1024) throw new Error('字幕檔超過 10 MiB 上限，請先縮小檔案。')
   const source = await file.text()
-  const extension = file.name.toLowerCase().endsWith('.srt') ? 'srt' : file.name.toLowerCase().endsWith('.vtt') ? 'vtt' : null
+  const extension = file.name.toLowerCase().endsWith('.srt') ? 'srt' : file.name.toLowerCase().endsWith('.vtt') ? 'vtt' : file.name.toLowerCase().endsWith('.sbv') ? 'sbv' : null
   const firstLine = source.replace(/^\uFEFF/, '').trimStart().split(/\r?\n/, 1)[0]?.trim().toUpperCase()
   const format = extension ?? (firstLine === 'WEBVTT' ? 'vtt' : null)
-  if (!format) throw new Error('只支援 .vtt 或 .srt 字幕檔。')
-  const cues = format === 'vtt' ? parseVtt(source) : parseSrt(source)
+  if (!format) throw new Error('只支援 .vtt、.srt 或 .sbv 字幕檔。')
+  const cues = format === 'vtt' ? parseVtt(source) : format === 'srt' ? parseSrt(source) : parseSbv(source)
   if (!cues.length) throw new Error('找不到有效字幕段落，請確認時間格式與檔案內容。')
   return { fileName: file.name, format, cues, cueCount: cues.length, earliestStart: cues[0].start, latestEnd: Math.max(...cues.map((cue) => cue.end)) }
 }

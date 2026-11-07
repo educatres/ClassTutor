@@ -76,7 +76,7 @@ footer { display: flex; justify-content: space-between; color: #829089; font-siz
 .message-head .message-meta { min-width: 0; }
 .favorite-button { flex: 0 0 auto; padding: 0 !important; border-radius: 0 !important; background: transparent !important; color: #c65e55 !important; font-size: 21px !important; font-weight: 400 !important; line-height: 1 !important; }
 .favorite-button:hover:not(:disabled) { background: transparent !important; color: #a63f38 !important; }
-.notes-panel { position: fixed; z-index: 60; display: flex; flex-direction: column; width: 360px; height: 460px; min-width: 260px; min-height: 220px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow: hidden; resize: both; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 55px rgba(22, 53, 42, .24); }
+.notes-panel { position: fixed; z-index: 60; display: flex; flex-direction: column; width: 540px; height: 690px; min-width: 260px; min-height: 220px; max-width: calc(100vw - 16px); max-height: calc(100vh - 16px); overflow: hidden; resize: both; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 18px 55px rgba(22, 53, 42, .24); }
 .notes-panel.is-dragging { user-select: none; }
 .notes-panel-header { display: flex; align-items: center; justify-content: space-between; flex: 0 0 auto; padding: 10px 12px; color: var(--teal-dark); background: #eef7f0; border-bottom: 1px solid var(--line); cursor: grab; }
 .notes-panel.is-dragging .notes-panel-header { cursor: grabbing; }
@@ -92,6 +92,7 @@ footer { display: flex; justify-content: space-between; color: #829089; font-siz
 .note-screenshot { margin: 0; padding: 9px; background: #f5faf5; border: 1px solid #dceadf; border-radius: 10px; }
 .note-screenshot img { display: block; width: 100%; max-height: 180px; object-fit: contain; background: #172321; }
 .note-screenshot figcaption { margin-top: 6px; text-align: center; }
+.screenshot-note-text { width: 100%; min-height: 54px; margin-top: 8px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 12px; line-height: 1.55; resize: vertical; }
 .screenshot-jump { padding: 0 !important; border-radius: 0 !important; background: transparent !important; color: var(--teal-dark) !important; font-size: 11px !important; font-weight: 500 !important; text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 1100px) {
   .student-shell .mode-switch { width: 100%; flex-wrap: wrap; }

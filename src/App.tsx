@@ -17,7 +17,9 @@ const COLUMN_RATIO_COLUMNS: Record<ColumnRatio, string> = { '3:1': '3fr 1fr', '1
 
 type StoredApiKeys = Partial<Record<AIProvider, { apiKey: string; expiresAt: number }>>
 type ConversationNote = { id: string; assistantId: string; userMessageId: string; text: string }
-type NoteScreenshot = { id: string; dataUrl: string; time: number | null }
+type NoteScreenshot = { id: string; dataUrl: string; time: number | null; text: string }
+type NotesLayout = { x: number; y: number; width: number; height: number }
+const NOTES_LAYOUT_STORAGE = 'video-ai-tutor.notes-layout.v1'
 function readStoredApiKey(provider: AIProvider) {
   try {
     const raw = localStorage.getItem(API_KEY_STORAGE)
@@ -48,6 +50,24 @@ function clearStoredApiKey(provider: AIProvider) {
     delete saved[provider]
     localStorage.setItem(API_KEY_STORAGE, JSON.stringify(saved))
   } catch { /* ignore blocked storage */ }
+}
+
+function defaultNotesLayout(): NotesLayout {
+  const viewportWidth = typeof window === 'undefined' ? 1280 : window.innerWidth
+  return { x: Math.max(8, viewportWidth - 560), y: 72, width: 540, height: 690 }
+}
+
+function readNotesLayout(): NotesLayout {
+  const fallback = defaultNotesLayout()
+  try {
+    const raw = localStorage.getItem(NOTES_LAYOUT_STORAGE)
+    const saved = raw ? JSON.parse(raw) as Partial<NotesLayout> : {}
+    return { x: Number.isFinite(saved.x) ? Number(saved.x) : fallback.x, y: Number.isFinite(saved.y) ? Number(saved.y) : fallback.y, width: Number.isFinite(saved.width) ? Number(saved.width) : fallback.width, height: Number.isFinite(saved.height) ? Number(saved.height) : fallback.height }
+  } catch { return fallback }
+}
+
+function saveNotesLayout(layout: NotesLayout) {
+  try { localStorage.setItem(NOTES_LAYOUT_STORAGE, JSON.stringify(layout)) } catch { /* private browsing or blocked storage */ }
 }
 
 function normalizeCitationId(value: string) {
@@ -180,7 +200,7 @@ export default function App() {
   const [notes, setNotes] = useState<ConversationNote[]>([])
   const [freeNote, setFreeNote] = useState('')
   const [screenshots, setScreenshots] = useState<NoteScreenshot[]>([])
-  const [notesPosition, setNotesPosition] = useState(() => ({ x: Math.max(16, (typeof window === 'undefined' ? 1000 : window.innerWidth) - 390), y: 72 }))
+  const [notesLayout, setNotesLayout] = useState<NotesLayout>(() => readNotesLayout())
   const [notesDragging, setNotesDragging] = useState(false)
   const playerHost = useRef<HTMLDivElement>(null)
   const player = useRef<YouTubePlayer | null>(null)
@@ -202,13 +222,31 @@ export default function App() {
       const panel = notesPanelRef.current?.getBoundingClientRect()
       const width = panel?.width ?? 340
       const height = panel?.height ?? 420
-      setNotesPosition({ x: Math.max(8, Math.min(window.innerWidth - width - 8, event.clientX - noteDragOffset.current.x)), y: Math.max(8, Math.min(window.innerHeight - height - 8, event.clientY - noteDragOffset.current.y)) })
+      setNotesLayout((layout) => { const next = { ...layout, x: Math.max(8, Math.min(window.innerWidth - width - 8, event.clientX - noteDragOffset.current.x)), y: Math.max(8, Math.min(window.innerHeight - height - 8, event.clientY - noteDragOffset.current.y)) }; saveNotesLayout(next); return next })
     }
     const onUp = () => setNotesDragging(false)
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp) }
   }, [notesDragging])
+
+  useEffect(() => {
+    if (!notesOpen || !notesPanelRef.current || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      const rect = notesPanelRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const width = Math.round(rect.width)
+      const height = Math.round(rect.height)
+      setNotesLayout((layout) => {
+        if (layout.width === width && layout.height === height) return layout
+        const next = { ...layout, width, height }
+        saveNotesLayout(next)
+        return next
+      })
+    })
+    observer.observe(notesPanelRef.current)
+    return () => observer.disconnect()
+  }, [notesOpen])
 
   const startNotesDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest('button')) return
@@ -222,7 +260,7 @@ export default function App() {
     const printWindow = window.open('', '_blank', 'width=900,height=1000')
     if (!printWindow) { setNotice('瀏覽器封鎖了列印視窗，請允許彈出視窗後再試。'); return }
     const noteHtml = notes.map((note) => `<article class="note"><h2>對話筆記</h2><p>${escapeHtml(note.text).replace(/\r?\n/g, '<br>')}</p></article>`).join('')
-    const screenshotHtml = screenshots.map((shot) => `<figure class="screenshot"><img src="${shot.dataUrl}" alt="筆記截圖"><figcaption>${shot.time === null ? '截圖' : `影片時間 ${fmt(shot.time)}`}</figcaption></figure>`).join('')
+    const screenshotHtml = screenshots.map((shot) => `<figure class="screenshot"><img src="${shot.dataUrl}" alt="筆記截圖"><figcaption>${shot.time === null ? '截圖' : `影片時間 ${fmt(shot.time)}`}</figcaption>${shot.text.trim() ? `<p>${escapeHtml(shot.text).replace(/\r?\n/g, '<br>')}</p>` : ''}</figure>`).join('')
     const freeHtml = freeNote.trim() ? `<article class="note"><h2>其他筆記</h2><p>${escapeHtml(freeNote).replace(/\r?\n/g, '<br>')}</p></article>` : ''
     printWindow.document.write(`<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><title>ClassTutor 筆記</title><style>@page{size:A4;margin:16mm}*{box-sizing:border-box}body{font-family:"Noto Sans TC",Arial,sans-serif;color:#172321;line-height:1.7;margin:0}.page{max-width:180mm;margin:0 auto}h1{font-size:22px;margin:0 0 18px;border-bottom:2px solid #12796d;padding-bottom:8px}.note{break-inside:avoid;border:1px solid #dce5de;border-radius:8px;padding:12px 14px;margin:0 0 14px}.note h2{font-size:15px;color:#0b5c53;margin:0 0 7px}.note p{font-size:12px;margin:0;white-space:normal}.screenshot{break-inside:avoid;margin:0 0 16px}.screenshot img{display:block;max-width:100%;max-height:100mm;margin:0 auto;border:1px solid #dce5de}.screenshot figcaption{font-size:11px;color:#687771;text-align:center;margin-top:4px}</style></head><body><main class="page"><h1>ClassTutor 筆記</h1>${noteHtml}${freeHtml}${screenshotHtml}</main></body></html>`)
     printWindow.document.close()
@@ -237,13 +275,14 @@ export default function App() {
     try {
       const dataUrls = await Promise.all(imageItems.map((item) => { const blob = item.getAsFile(); return blob ? readBlobAsDataUrl(blob) : Promise.resolve('') }))
       const noteTime = playerReady && player.current ? player.current.getCurrentTime() : null
-      setScreenshots((items) => [...items, ...dataUrls.filter(Boolean).map((dataUrl) => ({ id: crypto.randomUUID(), dataUrl, time: Number.isFinite(noteTime) ? noteTime : null }))])
+      setScreenshots((items) => [...items, ...dataUrls.filter(Boolean).map((dataUrl) => ({ id: crypto.randomUUID(), dataUrl, time: Number.isFinite(noteTime) ? noteTime : null, text: '' }))])
       setNotice('已將剪貼簿圖片加入筆記，可繼續編輯文字。')
     } catch (error: unknown) {
       setNotice(error instanceof Error ? error.message : '剪貼簿圖片加入失敗。')
     }
   }
 
+  const updateScreenshotText = (screenshotId: string, text: string) => setScreenshots((items) => items.map((item) => item.id === screenshotId ? { ...item, text } : item))
   const updateNote = (noteId: string, text: string) => setNotes((items) => items.map((item) => item.id === noteId ? { ...item, text } : item))
   const hasNote = (assistantId: string) => notes.some((note) => note.assistantId === assistantId)
   const toggleConversationNote = (assistantId: string) => {
@@ -348,7 +387,7 @@ export default function App() {
     <input ref={fileInput} className="visually-hidden-input" type="file" accept=".vait,application/octet-stream" onChange={onFileChange} />
     {!toolbarHidden ? <header className="topbar"><div><h1>ClassTutor 課堂影片 AI 助教</h1></div><div className="topbar-actions"><span className={`status-pill ${appStatus.toLowerCase()}`}>{appStatus}</span><button className="header-action" onClick={() => fileInput.current?.click()}>上傳課程包</button>{transcript && <button className="header-action" onClick={() => window.open('./', '_blank', 'noopener,noreferrer')}>上傳其他課程包</button>}<a className="teacher-link" href="./teacher.html">老師課程包工具</a><button className="settings-toggle" onClick={() => setSettingsOpen(true)}>AI模型設定</button><button className="toolbar-toggle" onClick={() => setToolbarHidden(true)}>隱藏工具列</button></div></header> : <button className="toolbar-reveal" onClick={() => setToolbarHidden(false)}>顯示工具列</button>}
     {settingsOpen && <div className="settings-overlay" role="presentation"><section className="card settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="section-heading"><div><h2 id="settings-title">AI模型設定</h2><p>API Key 會保存在本機瀏覽器，保存期限 1 天；重新整理後仍可沿用。</p></div><button className="close-button" onClick={() => setSettingsOpen(false)} aria-label="關閉模型設定">×</button></div><label htmlFor="provider">API Provider</label><select id="provider" value={provider} onChange={(e) => changeProvider(e.target.value as AIProvider)}><option value="google">Google AI Studio</option><option value="cgu">CGU API</option></select><label htmlFor="api-key">{provider === 'cgu' ? 'CGU API Key' : 'Google AI Studio API Key'}</label><div className="key-input"><input id="api-key" type={showKey ? 'text' : 'password'} value={apiKey} onChange={(e) => { setApiKey(e.target.value); setConnection({ kind: 'idle', message: '' }) }} placeholder="貼上你的 API Key" autoComplete="off" /><button className="icon-button" onClick={() => setShowKey((value) => !value)} aria-label={showKey ? '隱藏金鑰' : '顯示金鑰'}>{showKey ? '隱藏' : '顯示'}</button></div><div className="model-row"><label htmlFor="model-id">模型 ID</label><input id="model-id" value={modelId} onChange={(e) => setModelId(e.target.value)} list="model-options" /><datalist id="model-options">{modelOptions.map((model) => <option value={model} key={model} />)}</datalist></div><div className="button-row"><button onClick={testConnection} disabled={connection.kind === 'working' || !apiKey.trim()}>{connection.kind === 'working' ? '測試中…' : '測試連線'}</button><button className="secondary-button" onClick={loadModels} disabled={!apiKey.trim()}>讀取模型清單</button><button className="danger-button" onClick={clearApiKey} disabled={!apiKey}>清除 API Key</button></div>{connection.message && <p className={connection.kind === 'error' ? 'error-text' : 'success-text'} role="status">{connection.message}</p>}<p className="privacy-note">目前 provider：{provider === 'cgu' ? 'CGU API（預設 OSS 120B）' : 'Google AI Studio（預設 gemini-flash-lite-latest）'}。API Key 保存期限為 24 小時。</p></section></div>}
-    {notesOpen && <aside ref={notesPanelRef} className={`notes-panel ${notesDragging ? 'is-dragging' : ''}`} style={{ left: notesPosition.x, top: notesPosition.y }}><div className="notes-panel-header" onPointerDown={startNotesDrag}><strong>筆記</strong><div className="notes-panel-actions"><button className="notes-action" onClick={printNotes}>列印</button><button className="notes-close" onClick={() => setNotesOpen(false)} aria-label="關閉筆記">×</button></div></div><div className="notes-panel-body">{notes.length === 0 && <p className="notes-empty">按下 AI 回覆右上角的愛心，即可將問答加入筆記。</p>}{notes.map((note) => <article className="conversation-note" key={note.id}><button className="conversation-note-link" onClick={() => jumpToConversation(note.userMessageId)}>對話筆記</button><textarea value={note.text} onChange={(event) => updateNote(note.id, event.target.value)} aria-label="編輯對話筆記" rows={6} /></article>)}{screenshots.map((shot) => <figure className="note-screenshot" key={shot.id}><img src={shot.dataUrl} alt="筆記截圖" />{shot.time !== null ? <figcaption><button className="screenshot-jump" onClick={() => jumpTo(shot.time ?? 0)}>跳到影片 {fmt(shot.time)}</button></figcaption> : <figcaption>截圖（無時間資訊）</figcaption>}</figure>)}<textarea className="free-note" value={freeNote} onChange={(event) => setFreeNote(event.target.value)} onPaste={handleNotePaste} placeholder="可輸入文字或貼上剪貼簿截圖" aria-label="其他筆記" /></div></aside>}
+    {notesOpen && <aside ref={notesPanelRef} className={`notes-panel ${notesDragging ? 'is-dragging' : ''}`} style={{ left: notesLayout.x, top: notesLayout.y, width: notesLayout.width, height: notesLayout.height }}><div className="notes-panel-header" onPointerDown={startNotesDrag}><strong>筆記</strong><div className="notes-panel-actions"><button className="notes-action" onClick={printNotes}>列印</button><button className="notes-close" onClick={() => setNotesOpen(false)} aria-label="關閉筆記">×</button></div></div><div className="notes-panel-body">{notes.length === 0 && <p className="notes-empty">按下 AI 回覆右上角的愛心，即可將問答加入筆記。</p>}{notes.map((note) => <article className="conversation-note" key={note.id}><button className="conversation-note-link" onClick={() => jumpToConversation(note.userMessageId)}>對話筆記</button><textarea value={note.text} onChange={(event) => updateNote(note.id, event.target.value)} aria-label="編輯對話筆記" rows={6} /></article>)}{screenshots.map((shot) => <figure className="note-screenshot" key={shot.id}><img src={shot.dataUrl} alt="筆記截圖" />{shot.time !== null ? <figcaption><button className="screenshot-jump" onClick={() => jumpTo(shot.time ?? 0)}>跳到影片 {fmt(shot.time)}</button></figcaption> : <figcaption>截圖（無時間資訊）</figcaption>}<textarea className="screenshot-note-text" value={shot.text} onChange={(event) => updateScreenshotText(shot.id, event.target.value)} placeholder="為這張圖片新增文字" aria-label="編輯截圖文字" rows={3} /></figure>)}<textarea className="free-note" value={freeNote} onChange={(event) => setFreeNote(event.target.value)} onPaste={handleNotePaste} placeholder="可輸入文字或貼上剪貼簿截圖" aria-label="其他筆記" /></div></aside>}
     <main className="layout tutor-layout" style={{ gridTemplateColumns: COLUMN_RATIO_COLUMNS[columnRatio] }}>
       <section className="left-column video-column">
         <article className="video-card"><div id="video-player" className="player-wrap">{videoId ? <div ref={playerHost} className="youtube-host" /> : <div className="empty-player"><span>▶</span><p>使用上方「上傳課程包」開始學習</p></div>}{showSubtitles && currentSubtitle && <div className="subtitle-overlay" aria-live="polite">{currentSubtitle}</div>}</div>{videoError && <p className="error-text" role="alert">{videoError} {videoId && <a href={youtubeUrl(videoId)} target="_blank" rel="noreferrer">在 YouTube 開啟</a>}</p>}</article>

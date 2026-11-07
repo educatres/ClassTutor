@@ -15,11 +15,18 @@ npm run build
 
 ## 使用方式
 
-1. 貼入 YouTube 影片網址並按「載入影片」。支援 `youtube.com/watch`、`youtu.be`、`embed`、`shorts`。
-2. 匯入與影片時間一致的 `.vtt` 或 `.srt` 字幕。解析完全在瀏覽器本機完成，檔案上限 10 MiB。
-3. 貼上自己的 Google AI Studio API Key，按「測試連線」。預設模型為 `gemini-flash-lite-latest`，可在模型欄位手動改用可用模型。
-4. 播放影片後，在「跟著進度學習」模式提問。這個模式只會送出 `cue.end <= 送出當下播放時間` 的字幕；「全課複習」才會搜尋整份字幕。
-5. AI 回覆下方的時間卡由本機字幕資料產生，點擊可跳轉同頁播放器，也可開啟合法的 YouTube 備援連結。
+### 老師端
+
+開啟 [`teacher.html`](https://educatres.github.io/ClassTutor/teacher.html)，貼入支援 `youtube.com/watch`、`youtu.be`、`embed`、`shorts` 的 YouTube 影片網址，再上傳與影片時間一致的 `.vtt` 或 `.srt` 字幕。按下「產生並下載課程包」後，將 `.vait` 檔案提供給學生。
+
+課程包在瀏覽器內使用固定應用程式金鑰做 AES-GCM 基本加密，主要用來避免直接修改內容，不是機密資料保護；請勿放入未授權的敏感教材。
+
+### 學生端
+
+1. 開啟學生頁面，匯入老師提供的 `.vait` 課程包；影片網址與字幕會自動載入。
+2. 貼上自己的 Google AI Studio API Key，按「測試連線」。預設模型為 `gemini-flash-lite-latest`，可在模型欄位手動改用可用模型。
+3. 播放影片後，在「跟著進度學習」模式提問。這個模式只會送出 `cue.end <= 送出當下播放時間` 的字幕；「全課複習」才會搜尋整份字幕。
+4. AI 回覆下方的時間卡由本機字幕資料產生，點擊可跳轉同頁播放器，也可開啟合法的 YouTube 備援連結。
 
 ## API 連線方式
 

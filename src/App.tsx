@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ChangeEvent, ReactNode } from 'react'
-import type { ChatMessage, TranscriptDocument, TutorMode } from './types'
+import type { ChatMessage, Citation, TranscriptDocument, TutorMode } from './types'
 import { buildChunks } from './services/chunker'
 import { makeCitationCards } from './services/citationValidator'
 import { askProvider, CGU_DEFAULT_MODEL, DEFAULT_GEMINI_MODEL, listProviderModels, testProviderConnection, type AIProvider } from './services/geminiClient'
@@ -46,17 +46,24 @@ function clearStoredApiKey(provider: AIProvider) {
   } catch { /* ignore blocked storage */ }
 }
 
-function renderInlineMarkdown(value: string): ReactNode[] {
-  const pattern = /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_([^_]+)_|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\))/g
+function normalizeCitationId(value: string) {
+  const match = value.replace(/^\[|\]$/g, '').match(/^chunk_?(\d{4})$/i)
+  return match ? `chunk_${match[1]}` : value
+}
+
+function renderInlineMarkdown(value: string, citations?: Map<string, Citation>, onCitation?: (start: number) => void): ReactNode[] {
+  const pattern = /(\[?chunk_?\d{4}\]?|`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_([^_]+)_|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\))/gi
   const nodes: ReactNode[] = []
   let last = 0
   for (const match of value.matchAll(pattern)) {
     const index = match.index ?? 0
     if (index > last) nodes.push(value.slice(last, index))
     const token = match[0]
-    if (token.startsWith('`')) nodes.push(<code key={`${index}-code`}>{token.slice(1, -1)}</code>)
-    else if (token.startsWith('**') || token.startsWith('__')) nodes.push(<strong key={`${index}-strong`}>{token.slice(2, -2)}</strong>)
-    else if (token.startsWith('*') || token.startsWith('_')) nodes.push(<em key={`${index}-em`}>{token.slice(1, -1)}</em>)
+    const citation = citations?.get(normalizeCitationId(token))
+    if (citation && onCitation) nodes.push(<a key={`${index}-citation`} href="#video-player" onClick={(event) => { event.preventDefault(); onCitation(citation.start) }}>{fmt(citation.start)}</a>)
+    else if (token.startsWith('`')) nodes.push(<code key={`${index}-code`}>{token.slice(1, -1)}</code>)
+    else if (token.startsWith('**') || token.startsWith('__')) nodes.push(<strong key={`${index}-strong`}>{renderInlineMarkdown(token.slice(2, -2), citations, onCitation)}</strong>)
+    else if (token.startsWith('*') || token.startsWith('_')) nodes.push(<em key={`${index}-em`}>{renderInlineMarkdown(token.slice(1, -1), citations, onCitation)}</em>)
     else if (token.startsWith('[')) nodes.push(<a key={`${index}-link`} href={match[4]} target="_blank" rel="noreferrer">{match[3]}</a>)
     last = index + token.length
   }
@@ -64,7 +71,8 @@ function renderInlineMarkdown(value: string): ReactNode[] {
   return nodes
 }
 
-function renderMarkdown(value: string): ReactNode {
+function renderMarkdown(value: string, citations?: Map<string, Citation>, onCitation?: (start: number) => void): ReactNode {
+  if (citations?.size && onCitation && ![...citations.keys()].some((id) => value.match(new RegExp(`\\[?${id.replace('_', '_?')}\\]?`, 'i')))) value = `${value.trimEnd()} ${[...citations.keys()].join(' ')}`
   const lines = value.split(/\r?\n/)
   const blocks: ReactNode[] = []
   let paragraph: string[] = []
@@ -72,15 +80,15 @@ function renderMarkdown(value: string): ReactNode {
   let ordered = false
   let codeLines: string[] = []
   let inCode = false
-  const flushParagraph = () => { if (paragraph.length) { blocks.push(<p key={`p-${blocks.length}`}>{renderInlineMarkdown(paragraph.join(' '))}</p>); paragraph = [] } }
-  const flushList = () => { if (list.length) { const items = list; blocks.push(ordered ? <ol key={`ol-${blocks.length}`}>{items.map((item, index) => <li key={index}>{renderInlineMarkdown(item)}</li>)}</ol> : <ul key={`ul-${blocks.length}`}>{items.map((item, index) => <li key={index}>{renderInlineMarkdown(item)}</li>)}</ul>); list = [] } }
+  const flushParagraph = () => { if (paragraph.length) { blocks.push(<p key={`p-${blocks.length}`}>{renderInlineMarkdown(paragraph.join(' '), citations, onCitation)}</p>); paragraph = [] } }
+  const flushList = () => { if (list.length) { const items = list; blocks.push(ordered ? <ol key={`ol-${blocks.length}`}>{items.map((item, index) => <li key={index}>{renderInlineMarkdown(item, citations, onCitation)}</li>)}</ol> : <ul key={`ul-${blocks.length}`}>{items.map((item, index) => <li key={index}>{renderInlineMarkdown(item, citations, onCitation)}</li>)}</ul>); list = [] } }
   lines.forEach((line, index) => {
     if (line.trim().startsWith('```')) { if (inCode) { blocks.push(<pre key={`code-${index}`}><code>{codeLines.join('\n')}</code></pre>); codeLines = []; inCode = false } else { flushParagraph(); flushList(); codeLines = []; inCode = true } return }
     if (inCode) { codeLines.push(line); return }
     const heading = line.match(/^(#{1,6})\s+(.+)$/)
     const bullet = line.match(/^\s*[-*+]\s+(.+)$/)
     const number = line.match(/^\s*\d+[.)]\s+(.+)$/)
-    if (heading) { flushParagraph(); flushList(); const level = heading[1].length; const Tag = (`h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'); blocks.push(<Tag key={`h-${index}`}>{renderInlineMarkdown(heading[2])}</Tag>); return }
+    if (heading) { flushParagraph(); flushList(); const level = heading[1].length; const Tag = (`h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'); blocks.push(<Tag key={`h-${index}`}>{renderInlineMarkdown(heading[2], citations, onCitation)}</Tag>); return }
     if (bullet || number) { flushParagraph(); if (list.length && ordered !== Boolean(number)) flushList(); ordered = Boolean(number); list.push((bullet ?? number)![1]); return }
     if (!line.trim()) { flushParagraph(); flushList(); return }
     flushList(); paragraph.push(line.trim())
@@ -218,10 +226,10 @@ export default function App() {
     {settingsOpen && <div className="settings-overlay" role="presentation"><section className="card settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="section-heading"><div><h2 id="settings-title">AI模型設定</h2><p>API Key 會保存在本機瀏覽器，保存期限 1 天；重新整理後仍可沿用。</p></div><button className="close-button" onClick={() => setSettingsOpen(false)} aria-label="關閉模型設定">×</button></div><label htmlFor="provider">API Provider</label><select id="provider" value={provider} onChange={(e) => changeProvider(e.target.value as AIProvider)}><option value="google">Google AI Studio</option><option value="cgu">CGU API</option></select><label htmlFor="api-key">{provider === 'cgu' ? 'CGU API Key' : 'Google AI Studio API Key'}</label><div className="key-input"><input id="api-key" type={showKey ? 'text' : 'password'} value={apiKey} onChange={(e) => { setApiKey(e.target.value); setConnection({ kind: 'idle', message: '' }) }} placeholder="貼上你的 API Key" autoComplete="off" /><button className="icon-button" onClick={() => setShowKey((value) => !value)} aria-label={showKey ? '隱藏金鑰' : '顯示金鑰'}>{showKey ? '隱藏' : '顯示'}</button></div><div className="model-row"><label htmlFor="model-id">模型 ID</label><input id="model-id" value={modelId} onChange={(e) => setModelId(e.target.value)} list="model-options" /><datalist id="model-options">{modelOptions.map((model) => <option value={model} key={model} />)}</datalist></div><div className="button-row"><button onClick={testConnection} disabled={connection.kind === 'working' || !apiKey.trim()}>{connection.kind === 'working' ? '測試中…' : '測試連線'}</button><button className="secondary-button" onClick={loadModels} disabled={!apiKey.trim()}>讀取模型清單</button><button className="danger-button" onClick={clearApiKey} disabled={!apiKey}>清除 API Key</button></div>{connection.message && <p className={connection.kind === 'error' ? 'error-text' : 'success-text'} role="status">{connection.message}</p>}<p className="privacy-note">目前 provider：{provider === 'cgu' ? 'CGU API（預設 OSS 120B）' : 'Google AI Studio（預設 gemini-flash-lite-latest）'}。API Key 保存期限為 24 小時。</p></section></div>}
     <main className="layout tutor-layout">
       <section className="left-column video-column">
-        <article className="video-card"><div className="player-wrap">{videoId ? <div ref={playerHost} className="youtube-host" /> : <div className="empty-player"><span>▶</span><p>使用上方「上傳課程包」開始學習</p></div>}{showSubtitles && currentSubtitle && <div className="subtitle-overlay" aria-live="polite">{currentSubtitle}</div>}</div>{videoError && <p className="error-text" role="alert">{videoError} {videoId && <a href={youtubeUrl(videoId)} target="_blank" rel="noreferrer">在 YouTube 開啟</a>}</p>}</article>
+        <article className="video-card"><div id="video-player" className="player-wrap">{videoId ? <div ref={playerHost} className="youtube-host" /> : <div className="empty-player"><span>▶</span><p>使用上方「上傳課程包」開始學習</p></div>}{showSubtitles && currentSubtitle && <div className="subtitle-overlay" aria-live="polite">{currentSubtitle}</div>}</div>{videoError && <p className="error-text" role="alert">{videoError} {videoId && <a href={youtubeUrl(videoId)} target="_blank" rel="noreferrer">在 YouTube 開啟</a>}</p>}</article>
       </section>
       <aside className="right-column">
-        <article className="card chat-card"><div className="chat-header"><div className="mode-switch" role="group" aria-label="問答模式"><button className={mode === 'progress' ? 'selected' : ''} onClick={() => setMode('progress')}>跟著進度學習</button><button className={mode === 'review' ? 'selected' : ''} onClick={() => setMode('review')}>全課複習</button><button className={showSubtitles ? 'selected' : ''} onClick={() => setShowSubtitles((value) => !value)}>{showSubtitles ? '隱藏字幕' : '顯示字幕'}</button><button className="toolbar-inline-toggle" onClick={() => setToolbarHidden((value) => !value)}>{toolbarHidden ? '顯示工具列' : '隱藏工具列'}</button></div></div><div className="messages" aria-live="polite">{chat.length === 0 && <div className="chat-empty"><span>✦</span><p>播放影片、匯入字幕後，問我課堂中已經講過的內容。</p></div>}{chat.map((message) => <div className={`message ${message.role} ${message.status === 'error' ? 'message-error' : ''}`} key={message.id}><div className="message-meta">{message.role === 'user' ? '你' : 'AI 助教'} · {message.mode === 'progress' ? '跟著進度' : '全課複習'} · {fmt(message.cutoffSeconds)}</div><div className="markdown-content">{message.role === 'assistant' ? renderMarkdown(message.text) : <p>{message.text}</p>}</div>{message.citations && message.citations.length > 0 && <div className="citations">{message.citations.map((citation) => <div className="citation" key={citation.chunkId}><button onClick={() => jumpTo(citation.start)}>▶ {fmt(citation.start)}</button><span>{citation.excerpt}</span><a href={videoId ? youtubeUrl(videoId, citation.start) : '#'} target="_blank" rel="noreferrer">YouTube ↗</a></div>)}</div>}{message.role === 'assistant' && message.status === 'done' && (!message.citations || message.citations.length === 0) && <p className="unverified">回答沒有可驗證的字幕來源。</p>}</div>)}</div><div className="quick-prompts" aria-label="快速提問">{QUICK_PROMPTS.map((prompt) => <button key={prompt} onClick={() => setQuestion(prompt)} disabled={asking}>{prompt}</button>)}</div><div className="ask-form"><textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="" disabled={asking} rows={3} onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void submitQuestion() } }} /><button onClick={() => void submitQuestion()} disabled={asking || !question.trim()}>{asking ? '回答中…' : '送出'}</button></div>{asking && <button className="cancel-button" onClick={() => abortRef.current?.abort()}>取消這次提問</button>}{notice && <p className="notice" role="status">{notice}</p>}</article>
+        <article className="card chat-card"><div className="chat-header"><div className="mode-switch" role="group" aria-label="問答模式"><button className={mode === 'progress' ? 'selected' : ''} onClick={() => setMode('progress')}>跟著進度學習</button><button className={mode === 'review' ? 'selected' : ''} onClick={() => setMode('review')}>全課複習</button><button className={showSubtitles ? 'selected' : ''} onClick={() => setShowSubtitles((value) => !value)}>{showSubtitles ? '隱藏字幕' : '顯示字幕'}</button><button className="toolbar-inline-toggle" onClick={() => setToolbarHidden((value) => !value)}>{toolbarHidden ? '顯示工具列' : '隱藏工具列'}</button></div></div><div className="messages" aria-live="polite">{chat.length === 0 && <div className="chat-empty"><span>✦</span><p>播放影片、匯入字幕後，問我課堂中已經講過的內容。</p></div>}{chat.map((message) => <div className={`message ${message.role} ${message.status === 'error' ? 'message-error' : ''}`} key={message.id}><div className="message-meta">{message.role === 'user' ? '你' : 'AI 助教'} · {message.mode === 'progress' ? '跟著進度' : '全課複習'} · {fmt(message.cutoffSeconds)}</div><div className="markdown-content">{message.role === 'assistant' ? renderMarkdown(message.text, new Map((message.citations ?? []).map((citation) => [citation.chunkId, citation] as const)), jumpTo) : <p>{message.text}</p>}</div>{message.role === 'assistant' && message.status === 'done' && (!message.citations || message.citations.length === 0) && <p className="unverified">回答沒有可驗證的字幕來源。</p>}</div>)}</div><div className="quick-prompts" aria-label="快速提問">{QUICK_PROMPTS.map((prompt) => <button key={prompt} onClick={() => setQuestion(prompt)} disabled={asking}>{prompt}</button>)}</div><div className="ask-form"><textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="" disabled={asking} rows={3} onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void submitQuestion() } }} /><button onClick={() => void submitQuestion()} disabled={asking || !question.trim()}>{asking ? '回答中…' : '送出'}</button></div>{asking && <button className="cancel-button" onClick={() => abortRef.current?.abort()}>取消這次提問</button>}{notice && <p className="notice" role="status">{notice}</p>}</article>
       </aside>
     </main>
   </div>

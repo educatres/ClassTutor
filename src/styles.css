@@ -123,7 +123,7 @@ footer { display: flex; justify-content: space-between; color: #829089; font-siz
 .student-shell .notice,
 .student-shell .cancel-button { margin-left: 12px; margin-right: 12px; }
 .student-shell .messages { padding-top: 12px; }
-.student-shell .ask-form { padding-top: 8px; }
+.student-shell .ask-form { margin-left: 0; margin-right: 0; padding-top: 8px; padding-bottom: 0; }
 .student-shell .ask-form textarea { height: 38px; min-height: 38px; max-height: 38px; resize: none; border-radius: 0; padding: 8px 10px; }
 .student-shell .ask-form button { min-height: 38px; border-radius: 0; padding-top: 8px; padding-bottom: 8px; }
 .student-shell .quick-prompts { margin-bottom: 8px; }

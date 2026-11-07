@@ -148,3 +148,109 @@ footer { display: flex; justify-content: space-between; color: #829089; font-siz
   .student-shell .chat-toolbar-row-secondary > * { flex: 0 0 auto; }
   .student-shell .ask-form textarea { height: 38px; min-height: 38px; max-height: 38px; }
 }
+
+/* Tablet and phone refinements. Keep the video at a useful 16:9 size while
+   allowing the chat area to scroll independently on short screens. */
+html, body, #root, #teacher-root { min-width: 0; }
+body { overflow-x: hidden; }
+.student-shell .tutor-layout,
+.student-shell .video-column,
+.student-shell .right-column,
+.student-shell .chat-card { min-width: 0; }
+.student-shell .messages { overflow-x: hidden; overflow-y: auto; }
+.student-shell .markdown-content { overflow-wrap: anywhere; }
+
+@media (min-width: 561px) and (max-width: 1100px) {
+  .app-shell { padding: 20px clamp(16px, 3vw, 32px) 18px; }
+  .teacher-shell .topbar { align-items: center; margin-bottom: 20px; }
+  .teacher-shell .topbar h1 { font-size: clamp(24px, 4vw, 32px); }
+  .teacher-main { margin-top: 20px; }
+  .teacher-form { padding: 22px; }
+  .teacher-guide { padding: 22px; }
+  .teacher-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .teacher-steps div { padding: 11px; }
+  .teacher-guide a { margin-right: 10px; }
+
+  .student-shell .tutor-layout { gap: 12px; }
+  .student-shell .tutor-layout .video-column { min-height: clamp(280px, 56vw, 520px); }
+  .student-shell .tutor-layout .video-card { height: auto; }
+  .student-shell .tutor-layout .video-card .player-wrap { height: auto; aspect-ratio: 16 / 9; min-height: 0; }
+  .student-shell .tutor-layout .right-column { min-height: 0; }
+  .student-shell .tutor-layout .chat-card { height: min(680px, 76vh); min-height: 500px; }
+  .student-shell .chat-toolbar-row { min-height: 38px; }
+  .student-shell .chat-toolbar-row .header-action,
+  .student-shell .chat-toolbar-row .settings-toggle,
+  .student-shell .chat-toolbar-row .teacher-link { min-height: 32px; }
+}
+
+@media (max-width: 560px) {
+  .app-shell { padding: 12px 10px 14px; }
+  .card { padding: 14px; }
+  .teacher-shell .topbar { align-items: stretch; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+  .teacher-shell .topbar h1 { font-size: clamp(22px, 7vw, 28px); line-height: 1.2; }
+  .teacher-shell .teacher-link { align-self: flex-start; }
+  .teacher-main { margin-top: 0; gap: 12px; }
+  .teacher-hero { align-items: flex-start; gap: 11px; }
+  .teacher-mark { flex-basis: 42px; height: 42px; border-radius: 12px; font-size: 20px; }
+  .teacher-hero h2 { font-size: 16px; }
+  .teacher-hero p, .teacher-guide p, .teacher-guide li { font-size: 12px; }
+  .teacher-form { padding: 14px; }
+  .teacher-form input { min-height: 43px; }
+  .teacher-form .drop-zone { min-height: 112px; padding: 12px; }
+  .teacher-generate { min-height: 44px; margin-top: 14px; }
+  .teacher-steps { grid-template-columns: 1fr; gap: 8px; }
+  .teacher-steps div { flex-direction: row; align-items: baseline; gap: 10px; padding: 10px 11px; }
+  .teacher-info, .teacher-guide { padding: 14px; }
+  .teacher-guide h2 { font-size: 16px; margin-bottom: 14px; }
+  .guide-section + .guide-section { margin-top: 15px; padding-top: 14px; }
+  .guide-section a { display: block; margin: 7px 0 0; }
+  .teacher-shell footer { padding-top: 14px; line-height: 1.5; }
+
+  .student-shell { height: auto; min-height: 100dvh; overflow-x: hidden; }
+  .student-shell .tutor-layout { gap: 10px; }
+  .student-shell .tutor-layout .video-column { min-height: 0; }
+  .student-shell .tutor-layout .video-card { height: auto; }
+  .student-shell .tutor-layout .video-card .player-wrap { height: auto; aspect-ratio: 16 / 9; min-height: 0; }
+  .student-shell .tutor-layout .right-column { min-height: 0; }
+  .student-shell .tutor-layout .chat-card { height: min(620px, 78dvh); min-height: 470px; }
+  .student-shell .chat-toolbar-row { gap: 4px; padding: 4px 6px; min-height: 38px; }
+  .student-shell .chat-toolbar-row-primary { align-items: stretch; }
+  .student-shell .chat-toolbar-row-primary > .status-pill { align-self: center; }
+  .student-shell .chat-toolbar-row .header-action,
+  .student-shell .chat-toolbar-row .settings-toggle,
+  .student-shell .chat-toolbar-row .teacher-link { min-height: 34px; padding: 6px 7px !important; font-size: 11px !important; }
+  .student-shell .chat-toolbar-row-secondary .subtitle-toggle,
+  .student-shell .chat-toolbar-row-secondary .notes-toggle,
+  .student-shell .chat-toolbar-row-secondary .toolbar-inline-toggle { min-height: 32px; padding: 6px 7px; }
+  .student-shell .messages { padding: 10px 8px 0; }
+  .student-shell .message { margin-bottom: 11px; padding: 10px; }
+  .student-shell .message.user { margin-left: 8px; }
+  .student-shell .quick-prompts { margin-left: 8px; margin-right: 8px; gap: 5px 8px; }
+  .student-shell .ask-form { grid-template-columns: minmax(0, 1fr) auto; gap: 4px; padding-top: 6px; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .student-shell .ask-form button { width: auto; min-width: 48px; }
+  .student-shell .settings-overlay { padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); place-items: center; }
+  .student-shell .settings-dialog { width: min(480px, 100%); max-height: calc(100dvh - 20px); padding: 16px; }
+  .student-shell .model-row { grid-template-columns: 1fr; gap: 3px; }
+  .student-shell .model-row label { margin-top: 8px; }
+  .student-shell .button-row { flex-wrap: wrap; }
+  .student-shell .button-row button { min-width: calc(50% - 4px); }
+  .student-shell .notes-panel { left: 8px !important; top: 8px !important; width: calc(100vw - 16px) !important; height: min(78dvh, 620px) !important; max-width: none; max-height: calc(100dvh - 16px); }
+  .student-shell .subtitle-overlay { left: 3%; right: 3%; bottom: 6%; padding: 6px 8px; font-size: clamp(13px, 4vw, 19px); }
+}
+
+@media (max-width: 360px) {
+  .student-shell .chat-toolbar-row-primary > .status-pill { display: none; }
+  .student-shell .chat-toolbar-row-primary > * { flex: 1 1 calc(50% - 4px); }
+  .student-shell .chat-toolbar-row-primary > .settings-toggle { flex: 0 1 auto; }
+  .student-shell .message-meta { font-size: 9px; }
+  .student-shell .markdown-content { font-size: 12px; }
+}
+
+@media (orientation: landscape) and (max-height: 620px) {
+  .student-shell .tutor-layout { grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr) !important; gap: 0; height: 100dvh; }
+  .student-shell .tutor-layout .video-column { min-height: 0; }
+  .student-shell .tutor-layout .video-card .player-wrap { height: 100%; aspect-ratio: auto; }
+  .student-shell .tutor-layout .right-column { min-height: 0; }
+  .student-shell .tutor-layout .chat-card { height: 100dvh; min-height: 0; }
+  .student-shell .chat-toolbar-row { min-height: 30px; padding-top: 2px; padding-bottom: 2px; }
+}

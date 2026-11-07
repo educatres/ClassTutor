@@ -117,8 +117,6 @@ export default function App() {
   const [videoId, setVideoId] = useState<string | null>(null)
   const [videoError, setVideoError] = useState('')
   const [playerReady, setPlayerReady] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
   const [transcript, setTranscript] = useState<TranscriptDocument | null>(null)
   const [mode, setMode] = useState<TutorMode>('progress')
   const [question, setQuestion] = useState('')
@@ -162,21 +160,16 @@ export default function App() {
     const mount = document.createElement('div')
     host.appendChild(mount)
     createYouTubePlayer(mount, videoId, {
-      onReady: (instance) => { if (!disposed) { player.current = instance; setPlayerReady(true); setDuration((instance as YouTubePlayer & { getDuration?: () => number }).getDuration?.() ?? 0) } },
-      onStateChange: () => { if (!disposed) setCurrentTime(player.current?.getCurrentTime() ?? 0) },
+      onReady: (instance) => { if (!disposed) { player.current = instance; setPlayerReady(true) } },
+      onStateChange: () => { if (!disposed) player.current?.getCurrentTime() },
       onError: (code) => { if (!disposed) setVideoError(`YouTube 播放器錯誤（${code}）。影片可能不允許嵌入，請改用外部開啟。`) },
     }).catch((error: unknown) => { if (!disposed) setVideoError(error instanceof Error ? error.message : 'YouTube 播放器載入失敗。') })
-    const timer = window.setInterval(() => {
-      if (disposed || !player.current) return
-      const time = player.current.getCurrentTime()
-      if (Number.isFinite(time)) setCurrentTime(time)
-    }, 500)
-    return () => { disposed = true; window.clearInterval(timer); player.current?.destroy?.(); player.current = null; setPlayerReady(false) }
+    return () => { disposed = true; player.current?.destroy?.(); player.current = null; setPlayerReady(false) }
   }, [videoId])
 
   const jumpTo = useCallback((seconds: number) => {
     if (!playerReady || !player.current) { setNotice('播放器尚未準備完成，暫時無法跳轉。'); return }
-    player.current.seekTo(seconds, true); setCurrentTime(seconds)
+    player.current.seekTo(seconds, true)
   }, [playerReady])
 
   const importCoursePackage = async (file?: File) => {
@@ -184,7 +177,7 @@ export default function App() {
     if ((videoId || transcript || chat.length) && !window.confirm('匯入新課程包會清除目前影片與對話，是否繼續？')) return
     try {
       const course = await readCoursePackage(file)
-      setVideoError(''); setVideoId(course.videoId); setTranscript(course.transcript); setChat([]); setPlayerReady(false); setCurrentTime(0); setDuration(0); setNotice(`已載入課程包：${course.transcript.fileName} · ${course.transcript.cueCount} 段字幕。`)
+      setVideoError(''); setVideoId(course.videoId); setTranscript(course.transcript); setChat([]); setPlayerReady(false); setNotice(`已載入課程包：${course.transcript.fileName} · ${course.transcript.cueCount} 段字幕。`)
     } catch (error: unknown) { setNotice(error instanceof Error ? error.message : '課程包匯入失敗。') }
   }
 
@@ -234,11 +227,11 @@ export default function App() {
 
   return <div className={`app-shell student-shell ${toolbarHidden ? 'toolbar-is-hidden' : ''}`}>
     <input ref={fileInput} className="visually-hidden-input" type="file" accept=".vait,application/octet-stream" onChange={onFileChange} />
-    {!toolbarHidden ? <header className="topbar"><div><p className="eyebrow">VIDEO AI TUTOR</p><h1>課堂影片時間感知 AI 助教</h1></div><div className="topbar-actions"><span className={`status-pill ${appStatus.toLowerCase()}`}>{appStatus}</span><button className="header-action" onClick={() => fileInput.current?.click()}>上傳課程包</button>{transcript && <button className="header-action" onClick={() => window.open('./', '_blank', 'noopener,noreferrer')}>上傳其他課程包</button>}<a className="teacher-link" href="./teacher.html">老師課程包工具</a><button className="settings-toggle" onClick={() => setSettingsOpen(true)}>AI模型設定</button><button className="toolbar-toggle" onClick={() => setToolbarHidden(true)}>隱藏工具列</button></div></header> : <button className="toolbar-reveal" onClick={() => setToolbarHidden(false)}>顯示工具列</button>}
+    {!toolbarHidden ? <header className="topbar"><div><p className="eyebrow">CLASSTUTOR</p><h1>ClassTutor 課堂影片 AI 助教</h1></div><div className="topbar-actions"><span className={`status-pill ${appStatus.toLowerCase()}`}>{appStatus}</span><button className="header-action" onClick={() => fileInput.current?.click()}>上傳課程包</button>{transcript && <button className="header-action" onClick={() => window.open('./', '_blank', 'noopener,noreferrer')}>上傳其他課程包</button>}<a className="teacher-link" href="./teacher.html">老師課程包工具</a><button className="settings-toggle" onClick={() => setSettingsOpen(true)}>AI模型設定</button><button className="toolbar-toggle" onClick={() => setToolbarHidden(true)}>隱藏工具列</button></div></header> : <button className="toolbar-reveal" onClick={() => setToolbarHidden(false)}>顯示工具列</button>}
     {settingsOpen && <div className="settings-overlay" role="presentation"><section className="card settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="section-heading"><div><h2 id="settings-title">AI模型設定</h2><p>API Key 會保存在本機瀏覽器，保存期限 1 天；重新整理後仍可沿用。</p></div><button className="close-button" onClick={() => setSettingsOpen(false)} aria-label="關閉模型設定">×</button></div><label htmlFor="provider">API Provider</label><select id="provider" value={provider} onChange={(e) => changeProvider(e.target.value as AIProvider)}><option value="google">Google AI Studio</option><option value="cgu">CGU API</option></select><label htmlFor="api-key">{provider === 'cgu' ? 'CGU API Key' : 'Google AI Studio API Key'}</label><div className="key-input"><input id="api-key" type={showKey ? 'text' : 'password'} value={apiKey} onChange={(e) => { setApiKey(e.target.value); setConnection({ kind: 'idle', message: '' }) }} placeholder="貼上你的 API Key" autoComplete="off" /><button className="icon-button" onClick={() => setShowKey((value) => !value)} aria-label={showKey ? '隱藏金鑰' : '顯示金鑰'}>{showKey ? '隱藏' : '顯示'}</button></div><div className="model-row"><label htmlFor="model-id">模型 ID</label><input id="model-id" value={modelId} onChange={(e) => setModelId(e.target.value)} list="model-options" /><datalist id="model-options">{modelOptions.map((model) => <option value={model} key={model} />)}</datalist></div><div className="button-row"><button onClick={testConnection} disabled={connection.kind === 'working' || !apiKey.trim()}>{connection.kind === 'working' ? '測試中…' : '測試連線'}</button><button className="secondary-button" onClick={loadModels} disabled={!apiKey.trim()}>讀取模型清單</button><button className="danger-button" onClick={clearApiKey} disabled={!apiKey}>清除 API Key</button></div>{connection.message && <p className={connection.kind === 'error' ? 'error-text' : 'success-text'} role="status">{connection.message}</p>}<p className="privacy-note">目前 provider：{provider === 'cgu' ? 'CGU API（預設 OSS 120B）' : 'Google AI Studio（預設 gemini-flash-lite-latest）'}。API Key 保存期限為 24 小時。</p></section></div>}
     <main ref={layoutRef} className={`layout tutor-layout ${resizing ? 'is-resizing' : ''}`} style={{ gridTemplateColumns: `minmax(0, ${splitRatio}fr) 8px minmax(280px, ${100 - splitRatio}fr)` }}>
       <section className="left-column video-column">
-        <article className="video-card"><div className="player-wrap">{videoId ? <div ref={playerHost} className="youtube-host" /> : <div className="empty-player"><span>▶</span><p>使用上方「上傳課程包」開始學習</p></div>}</div><div className="time-row"><strong>{fmt(currentTime)}</strong><span>/ {fmt(duration)}</span><span className="time-hint">字幕時間直接對應影片時間</span></div>{videoError && <p className="error-text" role="alert">{videoError} {videoId && <a href={youtubeUrl(videoId)} target="_blank" rel="noreferrer">在 YouTube 開啟</a>}</p>}</article>
+        <article className="video-card"><div className="player-wrap">{videoId ? <div ref={playerHost} className="youtube-host" /> : <div className="empty-player"><span>▶</span><p>使用上方「上傳課程包」開始學習</p></div>}</div>{videoError && <p className="error-text" role="alert">{videoError} {videoId && <a href={youtubeUrl(videoId)} target="_blank" rel="noreferrer">在 YouTube 開啟</a>}</p>}</article>
       </section>
       <div className="splitter" role="separator" aria-label="調整影片與 Chatbot 欄寬" aria-orientation="vertical" onPointerDown={(event: ReactPointerEvent<HTMLDivElement>) => { event.preventDefault(); setResizing(true) }} />
       <aside className="right-column">

@@ -327,6 +327,7 @@ export default function App() {
 
   const importCoursePackage = async (file?: File) => {
     if (!file) return
+    if (!file.name.toLowerCase().endsWith('.classtutor')) { setNotice('只允許載入 .classtutor 課程包。'); return }
     if ((videoId || transcript || chat.length) && !window.confirm('匯入新課程包會清除目前影片與對話，是否繼續？')) return
     try {
       const course = await readCoursePackage(file)

@@ -40,7 +40,7 @@ export async function createCoursePackage(videoUrlInput: string, subtitleFile: F
   const iv = crypto.getRandomValues(new Uint8Array(12))
   const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await packageKey(), new TextEncoder().encode(JSON.stringify(payload)))
   const packageText = `${PACKAGE_PREFIX}.${bytesToBase64(iv)}.${bytesToBase64(new Uint8Array(encrypted))}`
-  return { fileName: `video-ai-tutor-${videoId}.vait`, content: packageText, payload }
+  return { fileName: `video-ai-tutor-${videoId}.classtutor`, content: packageText, payload }
 }
 
 function isTranscript(value: unknown): value is TranscriptDocument {

@@ -40,7 +40,7 @@ export async function createCoursePackage(videoUrlInput: string, subtitleFile: F
   const iv = crypto.getRandomValues(new Uint8Array(12))
   const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await packageKey(), new TextEncoder().encode(JSON.stringify(payload)))
   const packageText = `${PACKAGE_PREFIX}.${bytesToBase64(iv)}.${bytesToBase64(new Uint8Array(encrypted))}`
-  return { fileName: `video-ai-tutor-${videoId}.classtutor`, content: packageText, payload }
+  return { fileName: `classtutor-${videoId}.classtutor`, content: packageText, payload }
 }
 
 function isTranscript(value: unknown): value is TranscriptDocument {
@@ -57,7 +57,7 @@ function isTranscript(value: unknown): value is TranscriptDocument {
 export async function readCoursePackage(file: File) {
   if (file.size > 12 * 1024 * 1024) throw new Error('課程包超過 12 MiB 上限。')
   const raw = (await file.text()).trim().split('.')
-  if (raw.length !== 3 || raw[0] !== PACKAGE_PREFIX) throw new Error('不是有效的 Video AI Tutor 課程包。')
+  if (raw.length !== 3 || raw[0] !== PACKAGE_PREFIX) throw new Error('不是有效的 ClassTutor 課程包。')
   let decoded: CoursePackagePayload
   try {
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: base64ToBytes(raw[1]) }, await packageKey(), base64ToBytes(raw[2]))

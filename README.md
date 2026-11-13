@@ -1,4 +1,4 @@
-# Video AI Tutor
+# ClassTutor
 
 課堂影片時間感知 AI 助教：在瀏覽器載入 YouTube 影片與 Teams `.vtt`／YouTube `.srt`／`.sbv` 字幕，依目前播放進度檢索字幕，再由使用者自己的 Google AI Studio Key 提問。
 

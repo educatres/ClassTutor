@@ -542,3 +542,6 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .student-shell .settings-dialog .section-heading p::after { content: 'API Key 會保存在本機瀏覽器，保存期限 7 天；重新整理後仍可沿用。'; font-size: 12pt; }
 .student-shell .settings-dialog > .privacy-note { font-size: 0 !important; }
 .student-shell .settings-dialog > .privacy-note::after { content: 'API Key 保存期限為 7 天。'; font-size: 12pt; }
+.student-shell .tutor-layout .right-column { display: flex; flex-direction: column; min-height: 0; }
+.student-shell .student-session-actions { flex: 0 0 auto; }
+.student-shell .tutor-layout .chat-card { flex: 1 1 auto; height: auto; min-height: 0; }

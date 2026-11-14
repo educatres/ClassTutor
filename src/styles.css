@@ -285,6 +285,8 @@ body { overflow-x: hidden; }
 .teacher-content-feature { grid-area: content; min-width: 0; }
 .teacher-side-features { grid-area: side; display: grid; gap: 16px; min-width: 0; }
 .summary-feature, .package-feature { min-width: 0; }
+.summary-feature { order: 1; }
+.package-feature { order: 2; }
 .teacher-content-feature .teacher-actions .summary-kind,
 .teacher-content-feature .teacher-actions .primary,
 .teacher-content-feature > .teacher-output { display: none; }

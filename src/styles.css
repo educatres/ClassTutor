@@ -326,11 +326,14 @@ body { overflow-x: hidden; }
 .teacher-shell .topbar .teacher-subtitle { margin-top: 3px; font-size: 11px; }
 .teacher-shell .topbar .teacher-link { padding: 5px 8px; font-size: 11px; }
 .teacher-title-line { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; }
-.teacher-title-line .eyebrow { margin: 0; }
+.teacher-title-line .eyebrow { margin: 0; font-family: 'Noto Sans TC', system-ui, sans-serif; font-size: clamp(20px, 2.3vw, 28px) !important; font-weight: 700; letter-spacing: -.03em; }
 .teacher-title-line h1 { margin: 0; }
 .teacher-settings.is-closed .teacher-provider-note { display: none; }
 .teacher-hero-steps { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; }
 .teacher-hero-steps > i { display: grid; place-items: center; padding: 0 2px; color: var(--teal); font-size: 25px; font-style: normal; font-weight: 700; }
+.teacher-hero-steps div { display: flex; flex-direction: column; gap: 5px; padding: 11px 12px; align-items: stretch; }
+.teacher-hero-steps strong { color: var(--teal-dark); font-size: 13px; line-height: 1.35; }
+.teacher-hero-steps p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
 @media (max-width: 560px) { .teacher-hero-steps { grid-template-columns: 1fr; gap: 6px; } .teacher-hero-steps > i { transform: rotate(90deg); } }
 @media (max-width: 560px) { .teacher-shell .topbar { margin-bottom: 10px; padding-top: 3px; padding-bottom: 3px; } .teacher-shell .topbar h1 { font-size: 20px; } .teacher-shell .topbar .teacher-link { padding: 5px 7px; } }
 .teacher-ai-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; background: rgba(15, 34, 29, .72); backdrop-filter: blur(3px); }

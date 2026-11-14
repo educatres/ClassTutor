@@ -390,7 +390,7 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .cancel-button { color: var(--coral) !important; }
 @media (max-width: 560px) { .theme-picker { justify-content: flex-start; }.theme-picker select { min-width: 0; flex: 1; } }
 .student-shell .toolbar-inline-toggle { display: none !important; }
-@media (min-width: 901px) { .student-shell .tutor-layout { grid-template-columns: minmax(0, 1fr) minmax(280px, 320px) !important; } }
+@media (min-width: 901px) { .student-shell .tutor-layout { grid-template-columns: minmax(0, 1fr) minmax(280px, 320px); } }
 .course-package-overlay { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 24px; background: color-mix(in srgb, var(--teal-dark) 82%, transparent); backdrop-filter: blur(5px); }
 .course-package-overlay-card { position: relative; width: min(620px, 100%); max-height: min(760px, calc(100dvh - 48px)); overflow: auto; padding: clamp(24px, 4vw, 42px); border: 1px solid color-mix(in srgb, var(--card) 45%, transparent); border-radius: 18px; background: var(--card); box-shadow: 0 24px 80px color-mix(in srgb, var(--ink) 32%, transparent); }
 .course-package-overlay-close { position: absolute; top: 12px; right: 14px; padding: 2px 6px !important; background: transparent !important; color: var(--muted) !important; font-size: 25px !important; font-weight: 400 !important; line-height: 1; }
@@ -405,3 +405,7 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .course-package-help a { color: var(--teal-dark); font-weight: 700; }
 .course-package-help code { padding: 2px 5px; border-radius: 4px; background: var(--soft); color: var(--teal-dark); font: 500 11px 'DM Mono', monospace; }
 @media (max-width: 560px) { .course-package-overlay { padding: 12px; }.course-package-overlay-card { max-height: calc(100dvh - 24px); padding: 24px 18px 20px; border-radius: 14px; } }
+.student-shell .chat-toolbar-row-secondary::before { content: '影片/chat比例'; order: 1; flex: 0 0 auto; color: var(--teal-dark); font-size: 11px; line-height: 1; white-space: nowrap; }
+.student-shell .chat-toolbar-row-secondary .ratio-select { order: 2; }
+.student-shell .chat-toolbar-row-secondary .subtitle-toggle { order: 3; }
+.student-shell .chat-toolbar-row-secondary .notes-toggle { order: 4; }

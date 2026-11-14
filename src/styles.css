@@ -287,7 +287,7 @@ body { overflow-x: hidden; }
 .teacher-content-feature .teacher-actions .summary-kind,
 .teacher-content-feature .teacher-actions .primary,
 .teacher-content-feature > .teacher-output { display: none; }
-.teacher-content-feature::after { display: block; margin-top: 16px; padding: 10px 12px; border: 1px solid #f0df9f; border-radius: 5px; background: #fff8df; color: #85651a; content: '提醒：字幕修正與課程摘要會消耗大量 token；課程長度較長時，免費額度可能不足。也可以直接使用字幕檔案，只用人工修正、不修正，或跳過 AI 修正。'; font-size: 12px; line-height: 1.65; }
+.teacher-token-note { margin: -6px 0 14px; padding: 10px 12px; border: 1px solid #f0df9f; border-radius: 5px; background: #fff8df; color: #85651a; font-size: 12px; line-height: 1.65; }
 .summary-feature .feature-title { margin-bottom: 14px; }
 .summary-feature label { margin-top: 12px; }
 .summary-editor-textarea { min-height: 190px; resize: vertical; line-height: 1.65; }

@@ -260,6 +260,13 @@ body { overflow-x: hidden; }
 .teacher-workspace { width: 100%; max-width: none; }
 .teacher-subtitle { color: var(--muted); margin: 8px 0 0; font-size: 13px; }
 .teacher-provider-note { color: #85651a !important; background: #fff8df; border: 1px solid #f0df9f; border-radius: 8px; padding: 8px 10px; font-size: 12px !important; line-height: 1.6 !important; margin-top: 10px !important; }
+.teacher-provider-note a { color: #6d5311; font-weight: 700; }
+.teacher-reference-note { color: var(--muted) !important; font-size: 11px !important; margin: 8px 0 0 !important; }
+.teacher-settings-close { margin-left: auto; align-self: start; padding: 2px 8px !important; background: transparent !important; color: var(--muted) !important; font-size: 22px !important; font-weight: 400 !important; line-height: 1; }
+.teacher-settings-close:hover { color: var(--coral) !important; }
+.teacher-settings.is-closed .section-heading { margin-bottom: 0; }
+.teacher-settings-closed { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; }
+.teacher-settings-closed button { flex: 0 0 auto; padding: 8px 12px; }
 .teacher-settings { padding: 18px 20px; }
 .teacher-settings-grid { display: grid; gap: 12px; }
 .teacher-settings-row { display: grid; gap: 10px; align-items: end; }
@@ -270,6 +277,7 @@ body { overflow-x: hidden; }
 .teacher-key-input { display: grid; grid-template-columns: minmax(180px, 1fr) auto auto auto; gap: 6px; }
 .teacher-key-input input { min-width: 0; }
 .teacher-key-input button { border: 1px solid var(--line); background: #fff; color: var(--teal-dark); border-radius: 5px; padding: 8px 10px; font-size: 11px; min-height: 44px; white-space: nowrap; }
+.teacher-connection-status { display: block; margin-top: 6px; color: var(--muted); font-size: 11px; line-height: 1.4; }
 .teacher-connection { font-size: 11px; border-radius: 99px; padding: 6px 10px; background: #f0f4f0; color: var(--muted); white-space: nowrap; }
 .connection-ok { color: var(--teal-dark); background: var(--mint); }.connection-error { color: var(--coral); background: #fff0ec; }
 .teacher-feature-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(310px, .75fr); gap: 16px; align-items: start; }

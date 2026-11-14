@@ -262,11 +262,11 @@ body { overflow-x: hidden; }
 .teacher-provider-note { color: #85651a !important; background: #fff8df; border: 1px solid #f0df9f; border-radius: 8px; padding: 8px 10px; font-size: 12px !important; line-height: 1.6 !important; margin-top: 10px !important; }
 .teacher-provider-note a { color: #6d5311; font-weight: 700; }
 .teacher-reference-note { color: var(--muted) !important; font-size: 11px !important; margin: 8px 0 0 !important; }
-.teacher-settings-close { margin-left: auto; align-self: start; padding: 2px 8px !important; background: transparent !important; color: var(--muted) !important; font-size: 22px !important; font-weight: 400 !important; line-height: 1; }
-.teacher-settings-close:hover { color: var(--coral) !important; }
+.teacher-settings-toggle { margin-left: auto; align-self: start; padding: 8px 12px !important; background: #edf4ef !important; color: var(--teal-dark) !important; font-size: 11px !important; white-space: nowrap; }
+.teacher-settings-toggle:hover { background: var(--mint) !important; }
 .teacher-settings.is-closed .section-heading { margin-bottom: 0; }
 .teacher-settings-closed { display: flex; justify-content: space-between; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; }
-.teacher-settings-closed button { flex: 0 0 auto; padding: 8px 12px; }
+.teacher-guide-link { display: inline-block; margin-top: 6px; color: #6d5311; font-weight: 700; }
 .teacher-settings { padding: 18px 20px; }
 .teacher-settings-grid { display: grid; gap: 12px; }
 .teacher-settings-row { display: grid; gap: 10px; align-items: end; }

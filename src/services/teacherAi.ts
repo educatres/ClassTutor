@@ -6,7 +6,7 @@ const BASE_URL: Record<AIProvider, string> = { google: 'https://generativelangua
 export async function generateTeacherText(options: TeacherAiOptions, prompt: string, system = '') {
   if (!options.apiKey.trim()) throw new Error('請先在「AI 設定」輸入 API Key。')
   const controller = new AbortController()
-  const timeout = window.setTimeout(() => controller.abort(), 120_000)
+  const timeout = window.setTimeout(() => controller.abort(), 700_000)
   const abort = () => controller.abort()
   options.signal?.addEventListener('abort', abort, { once: true })
   try {
@@ -30,6 +30,36 @@ export async function generateTeacherText(options: TeacherAiOptions, prompt: str
   } finally {
     window.clearTimeout(timeout)
     options.signal?.removeEventListener('abort', abort)
+  }
+}
+
+/** Retry malformed/failed model output once with a format-repair prompt, then retry the original request once. */
+export async function generateTeacherTextWithRetry(options: TeacherAiOptions, prompt: string, system = '', validate?: (value: string) => boolean) {
+  let firstError: unknown
+  try {
+    const first = await generateTeacherText(options, prompt, system)
+    if (!validate || validate(first)) return first
+    firstError = new Error('AI 回應格式不符合要求。')
+  } catch (error) {
+    if (options.signal?.aborted) throw error
+    firstError = error
+  }
+  if (options.signal?.aborted) throw new DOMException('AI 處理已停止。', 'AbortError')
+  try {
+    const repaired = await generateTeacherText(options, prompt + '\n\n上一則回應格式無法解析。請重新輸出，只保留要求的格式，不要加入 Markdown 或說明文字。', system)
+    if (!validate || validate(repaired)) return repaired
+  } catch (error) {
+    if (options.signal?.aborted) throw error
+    /* retry the original request below */
+  }
+  if (options.signal?.aborted) throw new DOMException('AI 處理已停止。', 'AbortError')
+  try {
+    const retried = await generateTeacherText(options, prompt, system)
+    if (!validate || validate(retried)) return retried
+    throw new Error('AI 回應格式仍然無法解析。')
+  } catch (error) {
+    if (options.signal?.aborted) throw error
+    throw error instanceof Error ? error : firstError instanceof Error ? firstError : new Error('AI 請求失敗。')
   }
 }
 
@@ -62,6 +92,20 @@ export function parsePolishedCues(value: string, cues: Array<{ start: number; en
     })
     return cues.map((cue, index) => ({ ...cue, text: byIndex.get(index) ?? cue.text }))
   } catch { return cues }
+}
+
+export function parseSinglePolishedText(value: string) {
+  const match = value.match(/\{[\s\S]*\}/)
+  if (!match) return null
+  try {
+    const parsed = JSON.parse(match[0]) as Record<string, unknown>
+    const text = String(parsed.text ?? '').replace(/\s+/g, ' ').trim()
+    return text || null
+  } catch { return null }
+}
+
+export function createSingleSubtitlePolishPrompt(cue: { start: number; end: number; text: string }, glossary: string, references: string) {
+  return '請校正這一行課程字幕，只修正明顯錯字、誤聽、口語贅詞、重複與不自然斷句。可參考教材與確認詞彙，但不得新增字幕或教材沒有提到的事實、人名、數字、時間與結論。只輸出 JSON 物件：{"text":"修正後文字"}，不要輸出 Markdown 或其他說明。\n\n【確認詞彙】\n' + (glossary || '未提供') + '\n\n【教材】\n' + (references.slice(0, 8_000) || '未提供') + '\n\n【字幕】\n時間 ' + cue.start.toFixed(3) + '-' + cue.end.toFixed(3) + '\n' + cue.text
 }
 
 export function localSummary(cues: Array<{ text: string }>, references: string) {

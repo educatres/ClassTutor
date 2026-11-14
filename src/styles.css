@@ -409,25 +409,74 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .student-shell .chat-toolbar-row-secondary .ratio-select { order: 2; }
 .student-shell .chat-toolbar-row-secondary .subtitle-toggle { order: 3; }
 .student-shell .chat-toolbar-row-secondary .notes-toggle { order: 4; }
-.student-shell .markdown-content { font-size: 16.25px; }
-.student-shell { font-size: 125%; }
-.student-shell .markdown-content p, .student-shell .markdown-content li { font-size: 16.25px; }
-.student-shell .markdown-content h1, .student-shell .markdown-content h2, .student-shell .markdown-content h3, .student-shell .markdown-content h4, .student-shell .markdown-content h5, .student-shell .markdown-content h6 { font-size: 18.75px; }
-.student-shell .message-meta { font-size: 12.5px; }
-.student-shell .chat-empty p { font-size: 16.25px; }
-.student-shell .quick-prompts button { font-size: 13.75px; }
-.student-shell .ask-form textarea, .student-shell .ask-form button { font-size: 16.25px; }
-.student-shell .notes-panel-body, .student-shell .notes-panel-body textarea { font-size: 15px; }
+.student-shell { font-size: 16px; }
+.student-shell .topbar h1 { font-size: max(12pt, clamp(12px, 1.5vw, 17px)); }
+.student-shell .subtitle-overlay { font-size: max(12pt, clamp(15px, 1.8vw, 24px)); }
+.student-shell .markdown-content,
+.student-shell .markdown-content p,
+.student-shell .markdown-content li,
+.student-shell .markdown-content h1,
+.student-shell .markdown-content h2,
+.student-shell .markdown-content h3,
+.student-shell .markdown-content h4,
+.student-shell .markdown-content h5,
+.student-shell .markdown-content h6,
+.student-shell .message-meta,
+.student-shell .chat-empty p,
+.student-shell .quick-prompts button,
+.student-shell .ask-form textarea,
+.student-shell .ask-form button,
+.student-shell .notes-panel-body,
+.student-shell .notes-panel-body textarea,
+.student-shell .chat-toolbar-row .status-pill,
+.student-shell .chat-toolbar-row .header-action,
+.student-shell .chat-toolbar-row .settings-toggle,
+.student-shell .chat-toolbar-row .teacher-link,
+.student-shell .chat-toolbar-row-secondary::before,
+.student-shell .chat-toolbar-row-secondary .subtitle-toggle,
+.student-shell .chat-toolbar-row-secondary .notes-toggle,
+.student-shell .chat-toolbar-row-secondary .toolbar-inline-toggle,
+.student-shell .ratio-select,
+.student-shell .mode-switch button,
+.student-shell .mode-note,
+.student-shell .message p,
+.student-shell .citation button,
+.student-shell .citation span,
+.student-shell .citation a,
+.student-shell .unverified,
+.student-shell .notice,
+.student-shell .cancel-button,
+.student-shell .notes-empty,
+.student-shell .conversation-note-link,
+.student-shell .screenshot-jump,
+.student-shell .screenshot-note-text,
+.student-shell .notes-action { font-size: 12pt !important; }
+.student-shell .chat-toolbar-row .header-action,
+.student-shell .chat-toolbar-row .settings-toggle,
+.student-shell .chat-toolbar-row .teacher-link { font-size: 12pt !important; }
+.student-shell .eyebrow,
+.student-shell .course-package-overlay-lead,
+.student-shell .course-package-help h3,
+.student-shell .course-package-help ul,
+.student-shell .course-package-help code,
+.student-shell .section-heading p,
+.student-shell .settings-dialog label,
+.student-shell .settings-dialog .privacy-note,
+.student-shell .settings-dialog .api-guide-link,
+.student-shell .settings-dialog .icon-button,
+.student-shell .settings-dialog .error-text,
+.student-shell .settings-dialog .success-text { font-size: 12pt; }
+.student-shell .course-package-overlay-load { font-size: 12pt !important; }
 .markdown-table-wrap { max-width: 100%; margin: 10px 0 12px; overflow-x: auto; }
 .markdown-table { width: 100%; min-width: 420px; border-collapse: collapse; color: var(--ink); font-size: 1em; line-height: 1.55; }
 .markdown-table th, .markdown-table td { padding: 8px 10px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
 .markdown-table th { background: var(--soft-strong); color: var(--teal-dark); font-weight: 700; }
 .markdown-table tr:nth-child(even) td { background: color-mix(in srgb, var(--soft) 55%, transparent); }
-.student-shell .notes-panel { top: 10vh !important; right: auto !important; bottom: 0 !important; width: var(--notes-panel-width, 90vw) !important; height: 90vh !important; max-width: none; max-height: none; resize: none; border-radius: 14px 14px 0 0; }
+.student-shell .notes-panel { top: 5vh !important; right: auto !important; bottom: 0 !important; width: var(--notes-panel-width, 100vw) !important; height: 95vh !important; max-width: none; max-height: none; resize: none; border-radius: 14px 14px 0 0; }
 :root[data-notes-side='left'] .student-shell .notes-panel { left: 0 !important; }
 :root[data-notes-side='right'] .student-shell .notes-panel { left: auto !important; right: 0 !important; }
 .student-shell .notes-panel-header { cursor: default; }
-.notes-side-toggle { position: fixed; top: calc(10vh + 8px); z-index: 62; padding: 5px 8px !important; border: 1px solid var(--line); border-radius: 7px; background: var(--card) !important; color: var(--teal-dark) !important; font-size: 11px !important; }
+.notes-side-toggle { position: fixed; top: calc(5vh + 8px); z-index: 62; padding: 5px 8px !important; border: 1px solid var(--line); border-radius: 7px; background: var(--card) !important; color: var(--teal-dark) !important; font-size: 12pt !important; }
 :root[data-notes-side='left'] .notes-side-toggle { left: 90px; }
 :root[data-notes-side='right'] .notes-side-toggle { right: 90px; }
-@media (max-width: 560px) { .student-shell .notes-panel { top: 10vh !important; height: 90vh !important; }.notes-side-toggle { top: calc(10vh + 8px); } }
+@media (max-width: 560px) { .student-shell .notes-panel { top: 5vh !important; height: 95vh !important; }.notes-side-toggle { top: calc(5vh + 8px); } }

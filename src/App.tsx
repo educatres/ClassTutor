@@ -263,7 +263,7 @@ export default function App() {
       const selector = notesSide === 'left' ? '.student-shell .video-column' : '.student-shell .right-column'
       const region = document.querySelector<HTMLElement>(selector)
       const regionWidth = region?.getBoundingClientRect().width ?? window.innerWidth
-      const width = Math.max(260, Math.round(regionWidth * 0.9))
+      const width = Math.max(260, Math.round(regionWidth))
       document.documentElement.dataset.notesSide = notesSide
       document.documentElement.style.setProperty('--notes-panel-width', `${width}px`)
     }

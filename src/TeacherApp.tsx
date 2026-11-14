@@ -117,7 +117,6 @@ export default function TeacherApp() {
   const finishAiTask = () => { aiAbortRef.current = null; setAiTask(''); setAiProgress(''); setAiOverlayVisible(false) }
   const stopAiTask = () => { aiAbortRef.current?.abort(); aiAbortRef.current = null; setAiTask(''); setAiProgress(''); setAiOverlayVisible(false); setBusy(false); setNotice('已停止 AI 處理；已完成的字幕修正已保留。') }
   return <div className="teacher-shell app-shell">
-    <ThemePicker />
     {aiTask && !aiOverlayVisible && <button className="teacher-ai-reopen" type="button" onClick={() => setAiOverlayVisible(true)}>顯示 AI 進度</button>}
     {aiTask && aiOverlayVisible && <div className="teacher-ai-overlay" role="status" aria-live="polite"><div className="teacher-ai-dialog"><div className="teacher-ai-dialog-icon" aria-hidden="true">AI</div><p className="eyebrow">ClassTutor · AI</p><h2>{aiTask}</h2><p className="teacher-ai-progress">{aiProgress}</p><p className="teacher-ai-time-note">AI 文字修正最長可能約 10 分鐘。你可以隱藏此遮罩，處理會繼續在背景執行。</p><div className="teacher-ai-dialog-actions"><button className="secondary teacher-ai-overlay-close" type="button" onClick={() => setAiOverlayVisible(false)}>隱藏遮罩</button><button className="teacher-ai-overlay-stop" type="button" onClick={stopAiTask}>停止</button></div></div></div>}
     <header className="topbar"><div><p className="eyebrow">CLASSTUTOR · TEACHER</p><h1>老師課程工作台</h1><p className="teacher-subtitle">從字幕、講義到可交付的學生課程包，一頁完成備課。</p></div><a className="teacher-link" href="./">回到學生頁面</a></header>
@@ -140,6 +139,6 @@ export default function TeacherApp() {
       </section>
       {(error || notice) && <p className={error ? 'error-text teacher-message' : 'success-text teacher-message'} role={error ? 'alert' : 'status'}>{error || notice}</p>}
     </main>
-    <footer><span>ClassTutor · 老師工作台</span><span>字幕時間軸保持與影片一致</span></footer>
+    <footer><ThemePicker /><span>ClassTutor · 老師工作台</span><span>字幕時間軸保持與影片一致</span></footer>
   </div>
 }

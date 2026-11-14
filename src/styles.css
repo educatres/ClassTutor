@@ -345,7 +345,7 @@ body { overflow-x: hidden; }
 .subtitle-original mark { padding: 1px 2px; border-radius: 2px; background: #ffe0dc; color: #b33d2f; }
 
 /* Theme controls and semantic color overrides. */
-.theme-picker { position: fixed; right: 14px; bottom: 14px; z-index: 70; display: flex; align-items: center; gap: 7px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--card) 94%, transparent); box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 16%, transparent); }
+.theme-picker { display: flex; align-items: center; gap: 7px; padding: 0; }
 .theme-picker span { color: var(--muted); font-size: 11px; white-space: nowrap; }
 .theme-picker select { width: auto; min-width: 190px; margin: 0; padding: 6px 8px; border-radius: 7px; background: var(--field); color: var(--ink); font-size: 11px; }
 .status-pill { background: var(--card); }
@@ -388,4 +388,6 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .teacher-ai-overlay { background: color-mix(in srgb, var(--tea-deep, var(--teal-dark)) 72%, transparent); }
 .danger-button { background: var(--error-soft) !important; color: var(--coral) !important; }
 .cancel-button { color: var(--coral) !important; }
-@media (max-width: 560px) { .theme-picker { right: 10px; bottom: 10px; left: 10px; justify-content: space-between; }.theme-picker select { min-width: 0; flex: 1; } }
+.student-footer { margin-top: 0; }
+@media (min-width: 901px) { .student-shell { display: grid; grid-template-rows: minmax(0, 1fr) auto; height: 100vh; overflow: hidden; }.student-shell .tutor-layout { grid-row: 1; height: auto !important; min-height: 0 !important; }.student-shell .student-footer { grid-row: 2; } }
+@media (max-width: 560px) { .theme-picker { justify-content: flex-start; }.theme-picker select { min-width: 0; flex: 1; } }

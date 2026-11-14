@@ -485,3 +485,32 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 :root[data-notes-side='left'] .notes-side-toggle { left: 90px; }
 :root[data-notes-side='right'] .notes-side-toggle { right: 90px; }
 @media (max-width: 560px) { .student-shell .notes-panel { top: 5vh !important; height: 95vh !important; }.notes-side-toggle { top: calc(5vh + 8px); } }
+
+/* Teacher view: keep the smallest readable text at 12pt while preserving
+   larger headings, marks, and other display text. */
+.teacher-shell { font-size: 16px; }
+.teacher-shell p,
+.teacher-shell a,
+.teacher-shell label,
+.teacher-shell button,
+.teacher-shell input,
+.teacher-shell textarea,
+.teacher-shell select,
+.teacher-shell li,
+.teacher-shell small,
+.teacher-shell h3,
+.teacher-shell .teacher-connection,
+.teacher-shell .teacher-settings-closed,
+.teacher-shell .subtitle-editor-heading,
+.teacher-shell .teacher-output-heading,
+.teacher-shell .package-preview,
+.teacher-shell .feature-number,
+.teacher-shell .teacher-ai-dialog-icon,
+.teacher-shell .teacher-hero-steps b,
+.teacher-shell .teacher-hero-steps span,
+.teacher-shell .glossary-item span,
+.teacher-shell .reference-chip,
+.teacher-shell .subtitle-row > span,
+.teacher-shell .subtitle-original,
+.teacher-shell .theme-picker span,
+.teacher-shell .theme-picker select { font-size: 12pt !important; }

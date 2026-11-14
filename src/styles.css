@@ -532,3 +532,6 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .teacher-shell .subtitle-original,
 .teacher-shell .theme-picker span,
 .teacher-shell .theme-picker select { font-size: 12pt !important; }
+.teacher-shell .package-feature { background: #fff !important; }
+.teacher-shell .package-feature .teacher-generate { width: auto; display: inline-flex; }
+.course-package-overlay-load { width: auto; min-width: 0; display: inline-flex; }

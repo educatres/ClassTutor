@@ -1,7 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap');
-:root { font-family: 'Noto Sans TC', system-ui, sans-serif; color: #172321; background: #f4f7f2; font-synthesis: none; --ink: #172321; --muted: #687771; --line: #dce5de; --card: #fff; --teal: #12796d; --teal-dark: #0b5c53; --mint: #ddf2e8; --coral: #d55f48; }
+:root { font-family: 'Noto Sans TC', system-ui, sans-serif; color: var(--ink); background: var(--page); font-synthesis: none; --ink: #2e2521; --muted: #75685f; --line: #dfd1c6; --card: #fffdfb; --teal: #4a2f24; --teal-dark: #2d1d18; --mint: #eadbd1; --coral: #b54a42; --page: #f5eee8; --page-glow: #efe0d5; --soft: #f3e8df; --soft-strong: #eadbd1; --field: #fffaf7; --accent: #c87535; --accent-dark: #9d5728; --accent-soft: #fae8d7; --error-soft: #f7e0de; --ink-on-primary: #fff9f4; }
+:root[data-theme='navy'] { --ink: #1d2a33; --muted: #63727c; --line: #d6e0e5; --card: #fff; --teal: #1f4968; --teal-dark: #12324b; --mint: #e3f0ea; --coral: #b54a42; --page: #f2f5f7; --page-glow: #e4edf3; --soft: #eff4f7; --soft-strong: #e3f0ea; --field: #f9fbfc; --accent: #d9824d; --accent-dark: #a45b2f; --accent-soft: #f9e8dc; --error-soft: #f7e0de; --ink-on-primary: #f7fbfd; }
 * { box-sizing: border-box; }
-body { margin: 0; min-width: 320px; background: radial-gradient(circle at 12% -10%, #e3f5e7 0, transparent 35%), #f4f7f2; }
+body { margin: 0; min-width: 320px; background: radial-gradient(circle at 12% -10%, var(--page-glow) 0, transparent 35%), var(--page); }
 button, input, textarea { font: inherit; }
 button { cursor: pointer; border: 0; }
 button:disabled { cursor: not-allowed; opacity: .5; }
@@ -342,3 +343,49 @@ body { overflow-x: hidden; }
 .subtitle-original { margin: 0 0 4px; color: var(--muted); font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
 .subtitle-original > span { color: var(--muted); font-weight: 700; }
 .subtitle-original mark { padding: 1px 2px; border-radius: 2px; background: #ffe0dc; color: #b33d2f; }
+
+/* Theme controls and semantic color overrides. */
+.theme-picker { position: fixed; right: 14px; bottom: 14px; z-index: 70; display: flex; align-items: center; gap: 7px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 10px; background: color-mix(in srgb, var(--card) 94%, transparent); box-shadow: 0 8px 24px color-mix(in srgb, var(--ink) 16%, transparent); }
+.theme-picker span { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.theme-picker select { width: auto; min-width: 190px; margin: 0; padding: 6px 8px; border-radius: 7px; background: var(--field); color: var(--ink); font-size: 11px; }
+.status-pill { background: var(--card); }
+.status-pill.ready { color: var(--teal-dark); background: var(--mint); border-color: color-mix(in srgb, var(--teal) 25%, var(--line)); }
+.status-pill.asking { color: var(--accent-dark); background: var(--accent-soft); }
+.status-pill.error { color: var(--coral); background: var(--error-soft); }
+input, textarea, select { background: var(--field); color: var(--ink); }
+input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 12%, transparent); }
+.secondary-button, .ghost-button, .icon-button { background: var(--soft) !important; color: var(--teal-dark) !important; }
+.error-text { color: var(--coral); }
+.success-text { color: var(--teal-dark); }
+.drop-zone { border-color: color-mix(in srgb, var(--teal) 30%, var(--line)); background: var(--field); }
+.drop-zone:hover, .drop-zone.dragging { border-color: var(--teal); background: var(--soft-strong); }
+.cue.active { background: var(--soft-strong); }
+.mode-switch { background: var(--soft); }
+.mode-switch button.selected { background: var(--card); color: var(--teal-dark); }
+.mode-note { background: var(--soft); }
+.message { background: var(--soft); }
+.message.user { background: var(--mint); }
+.citation { border-color: color-mix(in srgb, var(--teal) 22%, var(--line)); background: var(--card); }
+.citation button, .citation a { color: var(--teal-dark); }
+.topbar { background: color-mix(in srgb, var(--page) 96%, transparent); }
+.header-action, .toolbar-toggle { background: var(--soft) !important; color: var(--teal-dark) !important; }
+.teacher-hero { background: linear-gradient(135deg, var(--soft-strong), var(--card)); }
+.teacher-mark, .feature-number { background: var(--teal); color: var(--ink-on-primary); }
+.teacher-steps div, .package-feature { background: var(--soft); }
+.package-loaded, .connection-ok { color: var(--teal-dark); background: var(--mint); }
+.quick-prompts button { background: var(--soft) !important; color: var(--teal-dark) !important; border-color: color-mix(in srgb, var(--teal) 18%, var(--line)); }
+.quick-prompts button:hover:not(:disabled) { background: var(--soft-strong) !important; }
+.student-shell .quick-prompts button { background: transparent !important; color: var(--teal-dark) !important; }
+.student-shell .quick-prompts button:hover:not(:disabled) { background: transparent !important; color: var(--teal) !important; }
+.notes-panel-header { color: var(--teal-dark); background: var(--soft-strong); }
+.conversation-note, .note-screenshot { background: var(--soft); border-color: var(--line); }
+.teacher-settings-toggle, .teacher-ai-overlay-close { background: var(--soft) !important; color: var(--teal-dark) !important; }
+.teacher-settings-toggle:hover { background: var(--soft-strong) !important; }
+.subtitle-editor-heading, .teacher-output-heading { background: var(--soft); color: var(--teal-dark); }
+.package-preview { background: var(--soft); color: var(--teal-dark); }
+.message-error { background: var(--error-soft); }
+.unverified { color: var(--accent-dark) !important; }
+.teacher-ai-overlay { background: color-mix(in srgb, var(--tea-deep, var(--teal-dark)) 72%, transparent); }
+.danger-button { background: var(--error-soft) !important; color: var(--coral) !important; }
+.cancel-button { color: var(--coral) !important; }
+@media (max-width: 560px) { .theme-picker { right: 10px; bottom: 10px; left: 10px; justify-content: space-between; }.theme-picker select { min-width: 0; flex: 1; } }

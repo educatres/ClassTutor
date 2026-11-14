@@ -473,6 +473,11 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .markdown-table th { background: var(--soft-strong); color: var(--teal-dark); font-weight: 700; }
 .markdown-table tr:nth-child(even) td { background: color-mix(in srgb, var(--soft) 55%, transparent); }
 .student-shell .notes-panel { top: 5vh !important; right: auto !important; bottom: 0 !important; width: var(--notes-panel-width, 100vw) !important; height: 95vh !important; max-width: none; max-height: none; resize: none; border-radius: 14px 14px 0 0; }
+.student-shell .notes-panel { background: #f3e8df; box-shadow: 0 26px 78px rgba(74, 47, 36, .42), 0 8px 24px rgba(45, 29, 24, .24); }
+.student-shell .notes-panel-header { background: #eadbd1; }
+.student-shell .conversation-note,
+.student-shell .note-screenshot { background: #f8efe8; border-color: #dfcdbf; }
+.student-shell .notes-panel-body textarea { background: #fffaf7; }
 :root[data-notes-side='left'] .student-shell .notes-panel { left: 0 !important; }
 :root[data-notes-side='right'] .student-shell .notes-panel { left: auto !important; right: 0 !important; }
 .student-shell .notes-panel-header { cursor: default; }

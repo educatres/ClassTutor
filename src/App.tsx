@@ -10,7 +10,9 @@ import { readCoursePackage } from './services/coursePackage'
 import { createYouTubePlayer, type YouTubePlayer, youtubeUrl } from './services/youtube'
 
 const API_KEY_STORAGE = 'video-ai-tutor.api-keys.v1'
-const API_KEY_TTL_MS = 24 * 60 * 60 * 1000
+const API_KEY_TTL_MS = 7 * 24 * 60 * 60 * 1000
+const TUTOR_SESSION_STORAGE = 'classtutor.student-session.v1'
+const TUTOR_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000
 const QUICK_PROMPTS = ['幫我整理這一段', '給我一個例子', '這段有哪些重點？', '前一步在做什麼？']
 type ColumnRatio = '2.5:1' | '3:1' | '1:1' | '1:2' | '1:3'
 const COLUMN_RATIO_COLUMNS: Record<ColumnRatio, string> = { '2.5:1': '2.5fr 1fr', '3:1': '3fr 1fr', '1:1': '1fr 1fr', '1:2': '1fr 2fr', '1:3': '1fr 3fr' }
@@ -20,7 +22,54 @@ type ConversationNote = { id: string; assistantId: string; userMessageId: string
 type NoteScreenshot = { id: string; dataUrl: string; time: number | null; text: string }
 type NotesSide = 'left' | 'right'
 type NotesLayout = { x: number; y: number; width: number; height: number }
+type PersistedTutorSession = {
+  version: 1
+  savedAt: number
+  provider: AIProvider
+  apiKey: string
+  modelId: string
+  videoId: string | null
+  videoTitle: string
+  transcript: TranscriptDocument | null
+  chat: ChatMessage[]
+  mode: TutorMode
+  question: string
+  notes: ConversationNote[]
+  freeNote: string
+  screenshots: NoteScreenshot[]
+  notesSide: NotesSide
+  showSubtitles: boolean
+  columnRatio: ColumnRatio
+  currentTime: number
+}
 const NOTES_SIDE_STORAGE = 'video-ai-tutor.notes-side.v1'
+function readTutorSession(): PersistedTutorSession | null {
+  try {
+    const raw = localStorage.getItem(TUTOR_SESSION_STORAGE)
+    if (!raw) return null
+    const saved = JSON.parse(raw) as PersistedTutorSession
+    if (!isTutorSession(saved) || !Number.isFinite(saved.savedAt) || saved.savedAt + TUTOR_SESSION_TTL_MS <= Date.now()) {
+      localStorage.removeItem(TUTOR_SESSION_STORAGE)
+      return null
+    }
+    return saved
+  } catch { return null }
+}
+function saveTutorSession(session: PersistedTutorSession) {
+  try { localStorage.setItem(TUTOR_SESSION_STORAGE, JSON.stringify(session)) } catch { /* storage may be full or blocked */ }
+}
+function downloadJson(name: string, value: unknown) {
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: 'application/json;charset=utf-8' }))
+  link.download = name
+  link.click()
+  window.setTimeout(() => URL.revokeObjectURL(link.href), 0)
+}
+function isTutorSession(value: unknown): value is PersistedTutorSession {
+  if (!value || typeof value !== 'object') return false
+  const item = value as Partial<PersistedTutorSession>
+  return item.version === 1 && item.provider !== undefined && (item.provider === 'google' || item.provider === 'cgu') && typeof item.apiKey === 'string' && typeof item.modelId === 'string' && (item.videoId === null || typeof item.videoId === 'string') && (item.transcript === null || typeof item.transcript === 'object') && Array.isArray(item.chat) && (item.mode === 'progress' || item.mode === 'review') && typeof item.question === 'string' && Array.isArray(item.notes) && typeof item.freeNote === 'string' && Array.isArray(item.screenshots) && (item.notesSide === 'left' || item.notesSide === 'right') && typeof item.showSubtitles === 'boolean' && ['2.5:1', '3:1', '1:1', '1:2', '1:3'].includes(item.columnRatio as string)
+}
 function readNotesLayout(): NotesLayout { return { x: 0, y: 0, width: 0, height: 0 } }
 function readStoredApiKey(provider: AIProvider) {
   try {
@@ -204,48 +253,60 @@ function statusLabel(key: string, videoId: string | null, transcript: Transcript
 }
 
 export default function App() {
-  const [provider, setProvider] = useState<AIProvider>('google')
-  const [apiKey, setApiKey] = useState(() => readStoredApiKey('google'))
+  const [restoredSession] = useState<PersistedTutorSession | null>(readTutorSession)
+  const initialProvider = restoredSession?.provider ?? 'google'
+  const initialApiKey = readStoredApiKey(initialProvider)
+  const [provider, setProvider] = useState<AIProvider>(initialProvider)
+  const [apiKey, setApiKey] = useState(initialApiKey)
   const [showKey, setShowKey] = useState(false)
-  const [modelId, setModelId] = useState(DEFAULT_GEMINI_MODEL)
+  const [modelId, setModelId] = useState(restoredSession?.modelId || (initialProvider === 'cgu' ? CGU_DEFAULT_MODEL : DEFAULT_GEMINI_MODEL))
   const [modelOptions, setModelOptions] = useState<string[]>([])
   const [connection, setConnection] = useState<{ kind: 'idle' | 'working' | 'ok' | 'error'; message: string }>({ kind: 'idle', message: '' })
-  const [videoId, setVideoId] = useState<string | null>(null)
-  const [videoTitle, setVideoTitle] = useState('')
+  const [videoId, setVideoId] = useState<string | null>(restoredSession?.videoId ?? null)
+  const [videoTitle, setVideoTitle] = useState(restoredSession?.videoTitle ?? '')
   const [videoError, setVideoError] = useState('')
   const [playerReady, setPlayerReady] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [transcript, setTranscript] = useState<TranscriptDocument | null>(null)
-  const [mode, setMode] = useState<TutorMode>('progress')
-  const [question, setQuestion] = useState('')
-  const [chat, setChat] = useState<ChatMessage[]>([])
+  const [currentTime, setCurrentTime] = useState(restoredSession?.currentTime ?? 0)
+  const [transcript, setTranscript] = useState<TranscriptDocument | null>(restoredSession?.transcript ?? null)
+  const [mode, setMode] = useState<TutorMode>(restoredSession?.mode ?? 'progress')
+  const [question, setQuestion] = useState(restoredSession?.question ?? '')
+  const [chat, setChat] = useState<ChatMessage[]>(restoredSession?.chat ?? [])
   const [asking, setAsking] = useState(false)
   const [notice, setNotice] = useState('')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [packageOverlayOpen, setPackageOverlayOpen] = useState(true)
   const [toolbarHidden, setToolbarHidden] = useState(false)
-  const [showSubtitles, setShowSubtitles] = useState(false)
-  const [columnRatio, setColumnRatio] = useState<ColumnRatio>('2.5:1')
+  const [showSubtitles, setShowSubtitles] = useState(restoredSession?.showSubtitles ?? false)
+  const [columnRatio, setColumnRatio] = useState<ColumnRatio>(restoredSession?.columnRatio ?? '2.5:1')
   const [notesOpen, setNotesOpen] = useState(false)
-  const [notes, setNotes] = useState<ConversationNote[]>([])
-  const [freeNote, setFreeNote] = useState('')
-  const [screenshots, setScreenshots] = useState<NoteScreenshot[]>([])
-  const [notesSide, setNotesSide] = useState<NotesSide>(() => readNotesSide())
+  const [notes, setNotes] = useState<ConversationNote[]>(restoredSession?.notes ?? [])
+  const [freeNote, setFreeNote] = useState(restoredSession?.freeNote ?? '')
+  const [screenshots, setScreenshots] = useState<NoteScreenshot[]>(restoredSession?.screenshots ?? [])
+  const [notesSide, setNotesSide] = useState<NotesSide>(() => restoredSession?.notesSide ?? readNotesSide())
   const [notesLayout] = useState<NotesLayout>(() => readNotesLayout())
   const [notesDragging] = useState(false)
   const playerHost = useRef<HTMLDivElement>(null)
   const player = useRef<YouTubePlayer | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  const sessionFileInput = useRef<HTMLInputElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const notesPanelRef = useRef<HTMLElement>(null)
   const messageRefs = useRef(new Map<string, HTMLDivElement>())
   const pendingChatScrollUserMessageId = useRef<string | null>(null)
+  const apiKeyInitialized = useRef(false)
+  const restoreTimeRef = useRef<number | null>(restoredSession?.currentTime ?? null)
 
   const chunks = useMemo(() => transcript ? buildChunks(transcript.cues) : [], [transcript])
   const currentSubtitle = useMemo(() => transcript?.cues.filter((cue) => currentTime >= cue.start && currentTime < cue.end).map((cue) => cue.text).join('\n') ?? '', [transcript, currentTime])
   const appStatus = statusLabel(apiKey, videoId, transcript, playerReady, asking)
 
-  useEffect(() => { saveApiKey(provider, apiKey) }, [provider, apiKey])
+  useEffect(() => {
+    if (!apiKeyInitialized.current) { apiKeyInitialized.current = true; return }
+    saveApiKey(provider, apiKey)
+  }, [provider, apiKey])
+
+  const getSessionSnapshot = (): PersistedTutorSession => ({ version: 1, savedAt: Date.now(), provider, apiKey, modelId, videoId, videoTitle, transcript, chat, mode, question, notes, freeNote, screenshots, notesSide, showSubtitles, columnRatio, currentTime })
+  useEffect(() => { const timer = window.setTimeout(() => saveTutorSession(getSessionSnapshot()), 400); return () => window.clearTimeout(timer) }, [provider, apiKey, modelId, videoId, videoTitle, transcript, chat, mode, question, notes, freeNote, screenshots, notesSide, showSubtitles, columnRatio, currentTime])
 
   useEffect(() => {
     if (asking) return
@@ -336,7 +397,7 @@ export default function App() {
     const mount = document.createElement('div')
     host.appendChild(mount)
     createYouTubePlayer(mount, videoId, {
-      onReady: (instance) => { if (!disposed) { player.current = instance; setVideoTitle(instance.getVideoData?.()?.title?.trim() ?? ''); setPlayerReady(true); setCurrentTime(instance.getCurrentTime()) } },
+      onReady: (instance) => { if (!disposed) { player.current = instance; const restoreTime = restoreTimeRef.current; if (restoreTime && restoreTime > 0) instance.seekTo(restoreTime, true); restoreTimeRef.current = null; setVideoTitle(instance.getVideoData?.()?.title?.trim() ?? ''); setPlayerReady(true); setCurrentTime(restoreTime && restoreTime > 0 ? restoreTime : instance.getCurrentTime()) } },
       onStateChange: () => { if (!disposed && player.current) setCurrentTime(player.current.getCurrentTime()) },
       onError: (code) => { if (!disposed) setVideoError(`YouTube 播放器錯誤（${code}）。影片可能不允許嵌入，請改用外部開啟。`) },
     }).catch((error: unknown) => { if (!disposed) setVideoError(error instanceof Error ? error.message : 'YouTube 播放器載入失敗。') })
@@ -362,7 +423,22 @@ export default function App() {
     } catch (error: unknown) { setNotice(error instanceof Error ? error.message : '課程包匯入失敗。') }
   }
 
+  const exportSession = () => { downloadJson(`classtutor-course-record-${videoId || 'empty'}.json`, getSessionSnapshot()); setNotice('課程紀錄 JSON 已下載。') }
+  const importSession = async (file?: File) => {
+    if (!file) return
+    try {
+      const parsed = JSON.parse(await file.text()) as unknown
+      if (!isTutorSession(parsed)) throw new Error('課程紀錄格式不正確或版本不支援。')
+      if ((videoId || transcript || chat.length) && !window.confirm('匯入課程紀錄會取代目前影片、字幕與對話，是否繼續？')) return
+      saveApiKey(parsed.provider, parsed.apiKey)
+      restoreTimeRef.current = parsed.currentTime
+      setProvider(parsed.provider); setApiKey(parsed.apiKey); setModelId(parsed.modelId); setModelOptions([]); setConnection({ kind: 'idle', message: '' })
+      setVideoError(''); setVideoId(parsed.videoId); setVideoTitle(parsed.videoTitle); setTranscript(parsed.transcript); setChat(parsed.chat); setMode(parsed.mode); setQuestion(parsed.question); setNotes(parsed.notes); setFreeNote(parsed.freeNote); setScreenshots(parsed.screenshots); setNotesSide(parsed.notesSide); saveNotesSide(parsed.notesSide); setShowSubtitles(parsed.showSubtitles); setColumnRatio(parsed.columnRatio as ColumnRatio); setPlayerReady(false); setCurrentTime(parsed.currentTime); setPackageOverlayOpen(false); setNotice('課程紀錄已匯入。')
+    } catch (error: unknown) { setNotice(error instanceof Error ? error.message : '課程紀錄匯入失敗。') }
+  }
+
   const onFileChange = (event: ChangeEvent<HTMLInputElement>) => { void importCoursePackage(event.target.files?.[0]); event.target.value = '' }
+  const onSessionFileChange = (event: ChangeEvent<HTMLInputElement>) => { void importSession(event.target.files?.[0]); event.target.value = '' }
   const changeProvider = (next: AIProvider) => {
     setProvider(next); setApiKey(readStoredApiKey(next)); setModelOptions([]); setConnection({ kind: 'idle', message: '' }); setModelId(next === 'cgu' ? CGU_DEFAULT_MODEL : DEFAULT_GEMINI_MODEL)
   }
@@ -416,7 +492,7 @@ export default function App() {
   }
 
   return <div className={`app-shell student-shell ${toolbarHidden ? 'toolbar-is-hidden' : ''}`}>
-    <input ref={fileInput} className="visually-hidden-input" type="file" accept=".classtutor,.clssstutor" onChange={onFileChange} />
+    <input ref={fileInput} className="visually-hidden-input" type="file" accept=".classtutor,.clssstutor" onChange={onFileChange} /><input ref={sessionFileInput} className="visually-hidden-input" type="file" accept="application/json,.json" onChange={onSessionFileChange} />
     {packageOverlayOpen && !transcript && <div className="course-package-overlay" role="dialog" aria-modal="true" aria-labelledby="course-package-overlay-title"><section className="course-package-overlay-card"><button className="course-package-overlay-close" type="button" onClick={() => setPackageOverlayOpen(false)} aria-label="關閉使用說明">×</button><p className="eyebrow">ClassTutor · Student</p><h2 id="course-package-overlay-title">開始一堂課</h2><p className="course-package-overlay-lead">先載入老師提供的課程包，就可以觀看影片、閱讀字幕並使用 AI 助教。</p><button className="course-package-overlay-load" type="button" onClick={() => fileInput.current?.click()}>載入課程包</button><div className="course-package-help"><h3>使用說明</h3><ul><li><strong>課程包：</strong>可載入原本的 <code>.classtutor</code>，或壓縮後的 <code>.clssstutor</code> 檔案。</li><li><strong>API Key：</strong>在 API Key 設定中貼上自己的金鑰；可前往 <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer">Google AI Studio 申請 API Key ↗</a>。</li><li><strong>筆記功能：</strong>按「筆記」開啟筆記面板，可收藏 AI 回覆或補充自己的文字。</li><li><strong>截圖功能：</strong>在筆記文字區貼上剪貼簿圖片，截圖會自動附上目前影片時間，方便複習。</li></ul></div></section></div>}
     {settingsOpen && <div className="settings-overlay" role="presentation"><section className="card settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="section-heading"><div><h2 id="settings-title">API Key</h2><p>API Key 會保存在本機瀏覽器，保存期限 1 天；重新整理後仍可沿用。</p></div><button className="close-button" onClick={() => setSettingsOpen(false)} aria-label="關閉 API Key 設定">×</button></div><label htmlFor="provider">API Provider</label><select id="provider" value={provider} onChange={(e) => changeProvider(e.target.value as AIProvider)}><option value="google">Google AI Studio</option><option value="cgu">CGU API</option></select><label htmlFor="api-key">{provider === 'cgu' ? 'CGU API Key' : 'Google AI Studio API Key'}</label><div className="key-input"><input id="api-key" type={showKey ? 'text' : 'password'} value={apiKey} onChange={(e) => { setApiKey(e.target.value); setConnection({ kind: 'idle', message: '' }) }} placeholder="貼上你的 API Key" autoComplete="off" /><button className="icon-button" onClick={() => setShowKey((value) => !value)} aria-label={showKey ? '隱藏金鑰' : '顯示金鑰'}>{showKey ? '隱藏' : '顯示'}</button></div><div className="model-row"><label htmlFor="model-id">模型 ID</label><input id="model-id" value={modelId} onChange={(e) => setModelId(e.target.value)} list="model-options" /><datalist id="model-options">{modelOptions.map((model) => <option value={model} key={model} />)}</datalist></div><div className="button-row"><button onClick={testConnection} disabled={connection.kind === 'working' || !apiKey.trim()}>{connection.kind === 'working' ? '測試中…' : '測試連線'}</button><button className="secondary-button" onClick={loadModels} disabled={!apiKey.trim()}>讀取模型清單</button><button className="danger-button" onClick={clearApiKey} disabled={!apiKey}>清除 API Key</button></div>{connection.message && <p className={connection.kind === 'error' ? 'error-text' : 'success-text'} role="status">{connection.message}</p>}<p className="privacy-note">目前 provider：{provider === 'cgu' ? 'CGU API（預設 OSS 120B）' : 'Google AI Studio（預設 gemini-flash-lite-latest）'}。API Key 保存期限為 24 小時。</p><hr className="api-guide-divider" /><a className="api-guide-link" href="./doc/googleAIstudioAPI/google-ai-studio-api-key-guide.html" target="_blank" rel="noreferrer">Google AI Studio API Key 申請指南 ↗</a></section></div>}
     {notesOpen && <aside ref={notesPanelRef} className={`notes-panel ${notesDragging ? 'is-dragging' : ''}`} style={{ left: notesLayout.x, top: notesLayout.y, width: notesLayout.width, height: notesLayout.height }}><div className="notes-panel-header" onPointerDown={startNotesDrag}><strong>筆記</strong><div className="notes-panel-actions"><button className="notes-action" onClick={printNotes}>列印</button><button className="notes-close" onClick={() => setNotesOpen(false)} aria-label="關閉筆記">×</button></div></div><div className="notes-panel-body">{notes.length === 0 && <p className="notes-empty">按下 AI 回覆右上角的愛心，即可將問答加入筆記。</p>}{notes.map((note) => <article className="conversation-note" key={note.id}><button className="conversation-note-link" onClick={() => jumpToConversation(note.userMessageId)}>對話筆記</button><textarea value={note.text} onChange={(event) => updateNote(note.id, event.target.value)} aria-label="編輯對話筆記" rows={6} /></article>)}{screenshots.map((shot) => <figure className="note-screenshot" key={shot.id}><img src={shot.dataUrl} alt="筆記截圖" />{shot.time !== null ? <figcaption><button className="screenshot-jump" onClick={() => jumpTo(shot.time ?? 0)}>跳到影片 {fmt(shot.time)}</button></figcaption> : <figcaption>截圖（無時間資訊）</figcaption>}<textarea className="screenshot-note-text" value={shot.text} onChange={(event) => updateScreenshotText(shot.id, event.target.value)} placeholder="為這張圖片新增文字" aria-label="編輯截圖文字" rows={3} /></figure>)}<textarea className="free-note" value={freeNote} onChange={(event) => setFreeNote(event.target.value)} onPaste={handleNotePaste} placeholder="可輸入文字或貼上剪貼簿截圖" aria-label="其他筆記" /></div></aside>}
@@ -426,6 +502,7 @@ export default function App() {
         <article className="video-card"><div id="video-player" className="player-wrap">{videoId ? <div ref={playerHost} className="youtube-host" /> : <div className="empty-player"><span>▶</span><p>使用「載入課程包」開始學習</p></div>}{showSubtitles && currentSubtitle && <div className="subtitle-overlay" aria-live="polite">{currentSubtitle}</div>}</div>{videoError && <p className="error-text" role="alert">{videoError} {videoId && <a href={youtubeUrl(videoId)} target="_blank" rel="noreferrer">在 YouTube 開啟</a>}</p>}</article>
       </section>
       <aside className="right-column">
+        <div className="student-session-actions"><button className="header-action" type="button" onClick={exportSession}>匯出課程紀錄</button><button className="header-action" type="button" onClick={() => sessionFileInput.current?.click()}>匯入課程紀錄</button></div>
         <article className="card chat-card"><div className="chat-header">{!toolbarHidden ? <div className="chat-toolbar"><div className="chat-toolbar-row chat-toolbar-row-primary"><span className={`status-pill ${appStatus.toLowerCase()}`}>{appStatus}</span><button className="header-action" onClick={() => fileInput.current?.click()}>載入課程包</button>{transcript && <button className="header-action" onClick={() => window.open('./', '_blank', 'noopener,noreferrer')}>載入其他課程包</button>}<a className="teacher-link" href="./teacher.html">老師版</a><button className="settings-toggle" onClick={() => setSettingsOpen(true)}>API Key</button></div><div className="chat-toolbar-row chat-toolbar-row-secondary"><label className="subtitle-toggle"><input type="checkbox" checked={showSubtitles} onChange={(event) => setShowSubtitles(event.target.checked)} /><span>字幕</span></label><select className="ratio-select" value={columnRatio} onChange={(event) => setColumnRatio(event.target.value as ColumnRatio)} aria-label="影片與 Chatbot 欄位比例"><option value="2.5:1">2.5:1</option><option value="3:1">3:1</option><option value="1:1">1:1</option><option value="1:2">1:2</option><option value="1:3">1:3</option></select><a href="#notes" className="notes-toggle" onClick={(event) => { event.preventDefault(); setNotesOpen((value) => !value) }}>筆記</a><a href="#toolbar" className="toolbar-inline-toggle" onClick={(event) => { event.preventDefault(); setToolbarHidden(true) }}>隱藏工具列</a></div></div> : <div className="chat-toolbar chat-toolbar-hidden-row"><a href="#toolbar" className="toolbar-inline-toggle" onClick={(event) => { event.preventDefault(); setToolbarHidden(false) }}>顯示工具列</a></div>}</div><div className="messages" aria-live="polite">{chat.length === 0 && <div className="chat-empty"><span>✦</span><p>播放影片、匯入字幕後，問我課堂中已經講過的內容。</p></div>}{chat.map((message) => <div ref={message.role === "user" ? (element) => { if (element) messageRefs.current.set(message.id, element); else messageRefs.current.delete(message.id) } : undefined} className={`message ${message.role} ${message.status === 'error' ? 'message-error' : ''}`} key={message.id}><div className="message-head"><div className="message-meta">{message.role === 'user' ? '你' : 'AI 助教'} · {message.mode === 'progress' ? '跟著進度' : '全課複習'} · {fmt(message.cutoffSeconds)}</div>{message.role === 'assistant' && <button className="favorite-button" onClick={() => toggleConversationNote(message.id)} aria-label={hasNote(message.id) ? '從筆記移除' : '加入筆記'}>{hasNote(message.id) ? '♥' : '♡'}</button>}</div><div className="markdown-content">{message.role === 'assistant' ? renderMarkdown(message.text, new Map((message.citations ?? []).map((citation) => [citation.chunkId, citation] as const)), jumpTo) : <p>{message.text}</p>}</div>{message.role === 'assistant' && message.status === 'done' && (!message.citations || message.citations.length === 0) && <p className="unverified">回答沒有可驗證的字幕來源。</p>}</div>)}</div><div className="quick-prompts" aria-label="快速提問">{QUICK_PROMPTS.map((prompt) => <button key={prompt} onClick={() => setQuestion(prompt)} disabled={asking}>{prompt}</button>)}</div><div className="ask-form"><textarea value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="" disabled={asking} rows={1} onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); void submitQuestion() } }} /><button onClick={() => void submitQuestion()} disabled={asking || !question.trim()}>{asking ? '回答中…' : '送出'}</button></div>{asking && <button className="cancel-button" onClick={() => abortRef.current?.abort()}>取消這次提問</button>}</article>
       </aside>
     </main>

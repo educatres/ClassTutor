@@ -139,6 +139,6 @@ export default function TeacherApp() {
       </section>
       {(error || notice) && <p className={error ? 'error-text teacher-message' : 'success-text teacher-message'} role={error ? 'alert' : 'status'}>{error || notice}</p>}
     </main>
-    <footer><ThemePicker /><span>ClassTutor · 老師工作台</span><span>字幕時間軸保持與影片一致</span></footer>
+    <footer><ThemePicker /></footer>
   </div>
 }

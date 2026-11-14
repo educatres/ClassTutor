@@ -334,6 +334,8 @@ body { overflow-x: hidden; }
 .teacher-hero-steps div { display: flex; flex-direction: column; gap: 5px; padding: 11px 12px; align-items: stretch; }
 .teacher-hero-steps strong { color: var(--teal-dark); font-size: 13px; line-height: 1.35; }
 .teacher-hero-steps p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.teacher-hero-intro { max-width: 86ch; margin: 0 0 14px !important; line-height: 1.7 !important; }
+.teacher-hero-intro strong { color: var(--teal-dark); }
 @media (max-width: 560px) { .teacher-hero-steps { grid-template-columns: 1fr; gap: 6px; } .teacher-hero-steps > i { transform: rotate(90deg); } }
 @media (max-width: 560px) { .teacher-shell .topbar { margin-bottom: 10px; padding-top: 3px; padding-bottom: 3px; } .teacher-shell .topbar h1 { font-size: 20px; } .teacher-shell .topbar .teacher-link { padding: 5px 7px; } }
 .teacher-ai-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; background: rgba(15, 34, 29, .72); backdrop-filter: blur(3px); }

@@ -211,12 +211,23 @@ export default function App() {
   const notesPanelRef = useRef<HTMLElement>(null)
   const noteDragOffset = useRef({ x: 0, y: 0 })
   const messageRefs = useRef(new Map<string, HTMLDivElement>())
+  const pendingChatScrollUserMessageId = useRef<string | null>(null)
 
   const chunks = useMemo(() => transcript ? buildChunks(transcript.cues) : [], [transcript])
   const currentSubtitle = useMemo(() => transcript?.cues.filter((cue) => currentTime >= cue.start && currentTime < cue.end).map((cue) => cue.text).join('\n') ?? '', [transcript, currentTime])
   const appStatus = statusLabel(apiKey, videoId, transcript, playerReady, asking)
 
   useEffect(() => { saveApiKey(provider, apiKey) }, [provider, apiKey])
+
+  useEffect(() => {
+    if (asking) return
+    const userMessageId = pendingChatScrollUserMessageId.current
+    if (!userMessageId) return
+    const element = messageRefs.current.get(userMessageId)
+    if (!element) return
+    pendingChatScrollUserMessageId.current = null
+    window.requestAnimationFrame(() => element.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }, [chat, asking])
 
   useEffect(() => {
     if (!notesDragging) return
@@ -363,6 +374,7 @@ export default function App() {
       const cutoff = Number.isFinite(currentTime) ? currentTime : 0
       const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', text, createdAt: Date.now(), mode, cutoffSeconds: cutoff, status: 'done' }
       const warningMessage: ChatMessage = { id: crypto.randomUUID(), role: 'assistant', text: PROMPT_GUARD_WARNING, createdAt: Date.now(), mode, cutoffSeconds: cutoff, status: 'error' }
+      pendingChatScrollUserMessageId.current = userMessage.id
       setChat((items) => [...items, userMessage, warningMessage]); setQuestion(''); setNotice(PROMPT_GUARD_WARNING)
       return
     }
@@ -374,6 +386,7 @@ export default function App() {
     const eligible = getEligibleCues(transcript.cues, mode, cutoff)
     const sources = retrieveSources(text, eligible, chunks)
     const userMessage: ChatMessage = { id: crypto.randomUUID(), role: 'user', text, createdAt: Date.now(), mode, cutoffSeconds: cutoff, status: 'done' }
+    pendingChatScrollUserMessageId.current = userMessage.id
     setChat((items) => [...items, userMessage]); setQuestion(''); setAsking(true); setNotice('')
     const assistantId = crypto.randomUUID()
     const controller = new AbortController(); abortRef.current = controller
@@ -384,7 +397,7 @@ export default function App() {
       const assistant: ChatMessage = { id: assistantId, role: 'assistant', text: answer.answer, createdAt: Date.now(), mode, cutoffSeconds: cutoff, citations, status: 'done' }
       setChat((items) => [...items, assistant])
     } catch (error: unknown) {
-      if ((error as Error)?.name === 'AbortError') setNotice('已取消這次提問。')
+      if ((error as Error)?.name === 'AbortError') { pendingChatScrollUserMessageId.current = null; setNotice('已取消這次提問。') }
       else { const message = error instanceof Error ? error.message : 'AI 問答失敗。'; setNotice(message); setChat((items) => [...items, { id: assistantId, role: 'assistant', text: message, createdAt: Date.now(), mode, cutoffSeconds: cutoff, status: 'error' }]) }
     } finally { abortRef.current = null; setAsking(false) }
   }

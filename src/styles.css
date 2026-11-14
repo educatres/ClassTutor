@@ -409,3 +409,25 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .student-shell .chat-toolbar-row-secondary .ratio-select { order: 2; }
 .student-shell .chat-toolbar-row-secondary .subtitle-toggle { order: 3; }
 .student-shell .chat-toolbar-row-secondary .notes-toggle { order: 4; }
+.student-shell .markdown-content { font-size: 16.25px; }
+.student-shell { font-size: 125%; }
+.student-shell .markdown-content p, .student-shell .markdown-content li { font-size: 16.25px; }
+.student-shell .markdown-content h1, .student-shell .markdown-content h2, .student-shell .markdown-content h3, .student-shell .markdown-content h4, .student-shell .markdown-content h5, .student-shell .markdown-content h6 { font-size: 18.75px; }
+.student-shell .message-meta { font-size: 12.5px; }
+.student-shell .chat-empty p { font-size: 16.25px; }
+.student-shell .quick-prompts button { font-size: 13.75px; }
+.student-shell .ask-form textarea, .student-shell .ask-form button { font-size: 16.25px; }
+.student-shell .notes-panel-body, .student-shell .notes-panel-body textarea { font-size: 15px; }
+.markdown-table-wrap { max-width: 100%; margin: 10px 0 12px; overflow-x: auto; }
+.markdown-table { width: 100%; min-width: 420px; border-collapse: collapse; color: var(--ink); font-size: 1em; line-height: 1.55; }
+.markdown-table th, .markdown-table td { padding: 8px 10px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+.markdown-table th { background: var(--soft-strong); color: var(--teal-dark); font-weight: 700; }
+.markdown-table tr:nth-child(even) td { background: color-mix(in srgb, var(--soft) 55%, transparent); }
+.student-shell .notes-panel { top: 10vh !important; right: auto !important; bottom: 0 !important; width: var(--notes-panel-width, 90vw) !important; height: 90vh !important; max-width: none; max-height: none; resize: none; border-radius: 14px 14px 0 0; }
+:root[data-notes-side='left'] .student-shell .notes-panel { left: 0 !important; }
+:root[data-notes-side='right'] .student-shell .notes-panel { left: auto !important; right: 0 !important; }
+.student-shell .notes-panel-header { cursor: default; }
+.notes-side-toggle { position: fixed; top: calc(10vh + 8px); z-index: 62; padding: 5px 8px !important; border: 1px solid var(--line); border-radius: 7px; background: var(--card) !important; color: var(--teal-dark) !important; font-size: 11px !important; }
+:root[data-notes-side='left'] .notes-side-toggle { left: 90px; }
+:root[data-notes-side='right'] .notes-side-toggle { right: 90px; }
+@media (max-width: 560px) { .student-shell .notes-panel { top: 10vh !important; height: 90vh !important; }.notes-side-toggle { top: calc(10vh + 8px); } }

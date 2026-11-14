@@ -18,8 +18,10 @@ const COLUMN_RATIO_COLUMNS: Record<ColumnRatio, string> = { '2.5:1': '2.5fr 1fr'
 type StoredApiKeys = Partial<Record<AIProvider, { apiKey: string; expiresAt: number }>>
 type ConversationNote = { id: string; assistantId: string; userMessageId: string; text: string }
 type NoteScreenshot = { id: string; dataUrl: string; time: number | null; text: string }
+type NotesSide = 'left' | 'right'
 type NotesLayout = { x: number; y: number; width: number; height: number }
-const NOTES_LAYOUT_STORAGE = 'video-ai-tutor.notes-layout.v1'
+const NOTES_SIDE_STORAGE = 'video-ai-tutor.notes-side.v1'
+function readNotesLayout(): NotesLayout { return { x: 0, y: 0, width: 0, height: 0 } }
 function readStoredApiKey(provider: AIProvider) {
   try {
     const raw = localStorage.getItem(API_KEY_STORAGE)
@@ -52,22 +54,14 @@ function clearStoredApiKey(provider: AIProvider) {
   } catch { /* ignore blocked storage */ }
 }
 
-function defaultNotesLayout(): NotesLayout {
-  const viewportWidth = typeof window === 'undefined' ? 1280 : window.innerWidth
-  return { x: Math.max(8, viewportWidth - 560), y: 72, width: 540, height: 690 }
-}
-
-function readNotesLayout(): NotesLayout {
-  const fallback = defaultNotesLayout()
+function readNotesSide(): NotesSide {
   try {
-    const raw = localStorage.getItem(NOTES_LAYOUT_STORAGE)
-    const saved = raw ? JSON.parse(raw) as Partial<NotesLayout> : {}
-    return { x: Number.isFinite(saved.x) ? Number(saved.x) : fallback.x, y: Number.isFinite(saved.y) ? Number(saved.y) : fallback.y, width: Number.isFinite(saved.width) ? Number(saved.width) : fallback.width, height: Number.isFinite(saved.height) ? Number(saved.height) : fallback.height }
-  } catch { return fallback }
+    return localStorage.getItem(NOTES_SIDE_STORAGE) === 'left' ? 'left' : 'right'
+  } catch { return 'right' }
 }
 
-function saveNotesLayout(layout: NotesLayout) {
-  try { localStorage.setItem(NOTES_LAYOUT_STORAGE, JSON.stringify(layout)) } catch { /* private browsing or blocked storage */ }
+function saveNotesSide(side: NotesSide) {
+  try { localStorage.setItem(NOTES_SIDE_STORAGE, side) } catch { /* private browsing or blocked storage */ }
 }
 
 function normalizeCitationId(value: string) {
@@ -95,6 +89,17 @@ function renderInlineMarkdown(value: string, citations?: Map<string, Citation>, 
   return nodes
 }
 
+function markdownTableCells(line: string) {
+  const trimmed = line.trim()
+  if (!trimmed.includes('|')) return null
+  const content = trimmed.replace(/^\|/, '').replace(/\|$/, '')
+  return content.split('|').map((cell) => cell.trim())
+}
+
+function isMarkdownTableDivider(cells: string[]) {
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell))
+}
+
 function renderMarkdown(value: string, citations?: Map<string, Citation>, onCitation?: (start: number) => void): ReactNode {
   if (citations?.size && onCitation) {
     if (![...citations.keys()].some((id) => value.match(new RegExp(`\\[?${id.replace('_', '_?')}\\]?`, 'i')))) value = `${value.trimEnd()} ${[...citations.keys()].join('、')}`
@@ -107,19 +112,42 @@ function renderMarkdown(value: string, citations?: Map<string, Citation>, onCita
   let ordered = false
   let codeLines: string[] = []
   let inCode = false
+  let skipTableLinesUntil = -1
   const flushParagraph = () => { if (paragraph.length) { blocks.push(<p key={`p-${blocks.length}`}>{renderInlineMarkdown(paragraph.join(' '), citations, onCitation)}</p>); paragraph = [] } }
   const flushList = () => { if (list.length) { const items = list; blocks.push(ordered ? <ol key={`ol-${blocks.length}`}>{items.map((item, index) => <li key={index}>{renderInlineMarkdown(item, citations, onCitation)}</li>)}</ol> : <ul key={`ul-${blocks.length}`}>{items.map((item, index) => <li key={index}>{renderInlineMarkdown(item, citations, onCitation)}</li>)}</ul>); list = [] } }
-  lines.forEach((line, index) => {
-    if (line.trim().startsWith('```')) { if (inCode) { blocks.push(<pre key={`code-${index}`}><code>{codeLines.join('\n')}</code></pre>); codeLines = []; inCode = false } else { flushParagraph(); flushList(); codeLines = []; inCode = true } return }
-    if (inCode) { codeLines.push(line); return }
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]
+    if (index <= skipTableLinesUntil) continue
+    if (line.trim().startsWith('```')) { if (inCode) { blocks.push(<pre key={`code-${index}`}><code>{codeLines.join('\n')}</code></pre>); codeLines = []; inCode = false } else { flushParagraph(); flushList(); codeLines = []; inCode = true } continue }
+    if (inCode) { codeLines.push(line); continue }
+    const tableHeader = markdownTableCells(line)
+    const tableDivider = index + 1 < lines.length ? markdownTableCells(lines[index + 1]) : null
+    if (tableHeader && tableDivider && isMarkdownTableDivider(tableDivider)) {
+      flushParagraph(); flushList()
+      const rows = [tableHeader]
+      let rowIndex = index + 2
+      while (rowIndex < lines.length) {
+        const row = markdownTableCells(lines[rowIndex])
+        if (!row) break
+        rows.push(row)
+        rowIndex += 1
+      }
+      const columnCount = Math.max(...rows.map((row) => row.length))
+      const normalizeRow = (row: string[]) => Array.from({ length: columnCount }, (_, cellIndex) => row[cellIndex] ?? '')
+      const normalizedHeader = normalizeRow(rows[0])
+      blocks.push(<div className="markdown-table-wrap" key={`table-${index}`}><table className="markdown-table"><thead><tr>{normalizedHeader.map((cell, cellIndex) => <th key={cellIndex}>{renderInlineMarkdown(cell, citations, onCitation)}</th>)}</tr></thead><tbody>{rows.slice(1).map((row, rowIndexInTable) => <tr key={rowIndexInTable}>{normalizeRow(row).map((cell, cellIndex) => <td key={cellIndex}>{renderInlineMarkdown(cell, citations, onCitation)}</td>)}</tr>)}</tbody></table></div>)
+      skipTableLinesUntil = rowIndex - 1
+      index = rowIndex - 1
+      continue
+    }
     const heading = line.match(/^(#{1,6})\s+(.+)$/)
     const bullet = line.match(/^\s*[-*+]\s+(.+)$/)
     const number = line.match(/^\s*\d+[.)]\s+(.+)$/)
-    if (heading) { flushParagraph(); flushList(); const level = heading[1].length; const Tag = (`h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'); blocks.push(<Tag key={`h-${index}`}>{renderInlineMarkdown(heading[2], citations, onCitation)}</Tag>); return }
-    if (bullet || number) { flushParagraph(); if (list.length && ordered !== Boolean(number)) flushList(); ordered = Boolean(number); list.push((bullet ?? number)![1]); return }
-    if (!line.trim()) { flushParagraph(); flushList(); return }
+    if (heading) { flushParagraph(); flushList(); const level = heading[1].length; const Tag = (`h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6'); blocks.push(<Tag key={`h-${index}`}>{renderInlineMarkdown(heading[2], citations, onCitation)}</Tag>); continue }
+    if (bullet || number) { flushParagraph(); if (list.length && ordered !== Boolean(number)) flushList(); ordered = Boolean(number); list.push((bullet ?? number)![1]); continue }
+    if (!line.trim()) { flushParagraph(); flushList(); continue }
     flushList(); paragraph.push(line.trim())
-  })
+  }
   if (inCode) blocks.push(<pre key="code-final"><code>{codeLines.join('\n')}</code></pre>)
   flushParagraph(); flushList()
   return <>{blocks}</>
@@ -202,14 +230,14 @@ export default function App() {
   const [notes, setNotes] = useState<ConversationNote[]>([])
   const [freeNote, setFreeNote] = useState('')
   const [screenshots, setScreenshots] = useState<NoteScreenshot[]>([])
-  const [notesLayout, setNotesLayout] = useState<NotesLayout>(() => readNotesLayout())
-  const [notesDragging, setNotesDragging] = useState(false)
+  const [notesSide, setNotesSide] = useState<NotesSide>(() => readNotesSide())
+  const [notesLayout] = useState<NotesLayout>(() => readNotesLayout())
+  const [notesDragging] = useState(false)
   const playerHost = useRef<HTMLDivElement>(null)
   const player = useRef<YouTubePlayer | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const notesPanelRef = useRef<HTMLElement>(null)
-  const noteDragOffset = useRef({ x: 0, y: 0 })
   const messageRefs = useRef(new Map<string, HTMLDivElement>())
   const pendingChatScrollUserMessageId = useRef<string | null>(null)
 
@@ -230,44 +258,28 @@ export default function App() {
   }, [chat, asking])
 
   useEffect(() => {
-    if (!notesDragging) return
-    const onMove = (event: PointerEvent) => {
-      const panel = notesPanelRef.current?.getBoundingClientRect()
-      const width = panel?.width ?? 340
-      const height = panel?.height ?? 420
-      setNotesLayout((layout) => { const next = { ...layout, x: Math.max(8, Math.min(window.innerWidth - width - 8, event.clientX - noteDragOffset.current.x)), y: Math.max(8, Math.min(window.innerHeight - height - 8, event.clientY - noteDragOffset.current.y)) }; saveNotesLayout(next); return next })
+    if (!notesOpen) return
+    const updateNotesPanelWidth = () => {
+      const selector = notesSide === 'left' ? '.student-shell .video-column' : '.student-shell .right-column'
+      const region = document.querySelector<HTMLElement>(selector)
+      const regionWidth = region?.getBoundingClientRect().width ?? window.innerWidth
+      const width = Math.max(260, Math.round(regionWidth * 0.9))
+      document.documentElement.dataset.notesSide = notesSide
+      document.documentElement.style.setProperty('--notes-panel-width', `${width}px`)
     }
-    const onUp = () => setNotesDragging(false)
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    return () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp) }
-  }, [notesDragging])
+    updateNotesPanelWidth()
+    window.addEventListener('resize', updateNotesPanelWidth)
+    return () => window.removeEventListener('resize', updateNotesPanelWidth)
+  }, [notesOpen, notesSide, columnRatio])
 
-  useEffect(() => {
-    if (!notesOpen || !notesPanelRef.current || typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(() => {
-      const rect = notesPanelRef.current?.getBoundingClientRect()
-      if (!rect) return
-      const width = Math.round(rect.width)
-      const height = Math.round(rect.height)
-      setNotesLayout((layout) => {
-        if (layout.width === width && layout.height === height) return layout
-        const next = { ...layout, width, height }
-        saveNotesLayout(next)
-        return next
-      })
+  const toggleNotesSide = () => {
+    setNotesSide((side) => {
+      const next = side === 'left' ? 'right' : 'left'
+      saveNotesSide(next)
+      return next
     })
-    observer.observe(notesPanelRef.current)
-    return () => observer.disconnect()
-  }, [notesOpen])
-
-  const startNotesDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if ((event.target as HTMLElement).closest('button')) return
-    const rect = notesPanelRef.current?.getBoundingClientRect()
-    if (!rect) return
-    noteDragOffset.current = { x: event.clientX - rect.left, y: event.clientY - rect.top }
-    setNotesDragging(true)
   }
+  const startNotesDrag = (_event: ReactPointerEvent<HTMLDivElement>) => undefined
 
   const printNotes = () => {
     const printWindow = window.open('', '_blank', 'width=900,height=1000')
@@ -339,7 +351,8 @@ export default function App() {
 
   const importCoursePackage = async (file?: File) => {
     if (!file) return
-    if (!file.name.toLowerCase().endsWith('.classtutor')) { setNotice('只允許載入 .classtutor 課程包。'); return }
+    const fileName = file.name.toLowerCase()
+    if (!fileName.endsWith('.classtutor') && !fileName.endsWith('.clssstutor')) { setNotice('只允許載入 .classtutor 或壓縮的 .clssstutor 課程包。'); return }
     if ((videoId || transcript || chat.length) && !window.confirm('匯入新課程包會清除目前影片與對話，是否繼續？')) return
     try {
       const course = await readCoursePackage(file)
@@ -403,10 +416,11 @@ export default function App() {
   }
 
   return <div className={`app-shell student-shell ${toolbarHidden ? 'toolbar-is-hidden' : ''}`}>
-    <input ref={fileInput} className="visually-hidden-input" type="file" accept=".classtutor" onChange={onFileChange} />
-    {packageOverlayOpen && !transcript && <div className="course-package-overlay" role="dialog" aria-modal="true" aria-labelledby="course-package-overlay-title"><section className="course-package-overlay-card"><button className="course-package-overlay-close" type="button" onClick={() => setPackageOverlayOpen(false)} aria-label="關閉使用說明">×</button><p className="eyebrow">CLASSTUTOR · STUDENT</p><h2 id="course-package-overlay-title">開始一堂課</h2><p className="course-package-overlay-lead">先載入老師提供的課程包，就可以觀看影片、閱讀字幕並使用 AI 助教。</p><button className="course-package-overlay-load" type="button" onClick={() => fileInput.current?.click()}>載入課程包</button><div className="course-package-help"><h3>使用說明</h3><ul><li><strong>課程包：</strong>由老師製作的 <code>.classtutor</code> 檔案，包含影片連結與字幕。</li><li><strong>API Key：</strong>在 API Key 設定中貼上自己的金鑰；可前往 <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer">Google AI Studio 申請 API Key ↗</a>。</li><li><strong>筆記功能：</strong>按「筆記」開啟筆記面板，可收藏 AI 回覆或補充自己的文字。</li><li><strong>截圖功能：</strong>在筆記文字區貼上剪貼簿圖片，截圖會自動附上目前影片時間，方便複習。</li></ul></div></section></div>}
+    <input ref={fileInput} className="visually-hidden-input" type="file" accept=".classtutor,.clssstutor" onChange={onFileChange} />
+    {packageOverlayOpen && !transcript && <div className="course-package-overlay" role="dialog" aria-modal="true" aria-labelledby="course-package-overlay-title"><section className="course-package-overlay-card"><button className="course-package-overlay-close" type="button" onClick={() => setPackageOverlayOpen(false)} aria-label="關閉使用說明">×</button><p className="eyebrow">CLASSTUTOR · STUDENT</p><h2 id="course-package-overlay-title">開始一堂課</h2><p className="course-package-overlay-lead">先載入老師提供的課程包，就可以觀看影片、閱讀字幕並使用 AI 助教。</p><button className="course-package-overlay-load" type="button" onClick={() => fileInput.current?.click()}>載入課程包</button><div className="course-package-help"><h3>使用說明</h3><ul><li><strong>課程包：</strong>可載入原本的 <code>.classtutor</code>，或壓縮後的 <code>.clssstutor</code> 檔案。</li><li><strong>API Key：</strong>在 API Key 設定中貼上自己的金鑰；可前往 <a href="https://aistudio.google.com/" target="_blank" rel="noreferrer">Google AI Studio 申請 API Key ↗</a>。</li><li><strong>筆記功能：</strong>按「筆記」開啟筆記面板，可收藏 AI 回覆或補充自己的文字。</li><li><strong>截圖功能：</strong>在筆記文字區貼上剪貼簿圖片，截圖會自動附上目前影片時間，方便複習。</li></ul></div></section></div>}
     {settingsOpen && <div className="settings-overlay" role="presentation"><section className="card settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title"><div className="section-heading"><div><h2 id="settings-title">API Key</h2><p>API Key 會保存在本機瀏覽器，保存期限 1 天；重新整理後仍可沿用。</p></div><button className="close-button" onClick={() => setSettingsOpen(false)} aria-label="關閉 API Key 設定">×</button></div><label htmlFor="provider">API Provider</label><select id="provider" value={provider} onChange={(e) => changeProvider(e.target.value as AIProvider)}><option value="google">Google AI Studio</option><option value="cgu">CGU API</option></select><label htmlFor="api-key">{provider === 'cgu' ? 'CGU API Key' : 'Google AI Studio API Key'}</label><div className="key-input"><input id="api-key" type={showKey ? 'text' : 'password'} value={apiKey} onChange={(e) => { setApiKey(e.target.value); setConnection({ kind: 'idle', message: '' }) }} placeholder="貼上你的 API Key" autoComplete="off" /><button className="icon-button" onClick={() => setShowKey((value) => !value)} aria-label={showKey ? '隱藏金鑰' : '顯示金鑰'}>{showKey ? '隱藏' : '顯示'}</button></div><div className="model-row"><label htmlFor="model-id">模型 ID</label><input id="model-id" value={modelId} onChange={(e) => setModelId(e.target.value)} list="model-options" /><datalist id="model-options">{modelOptions.map((model) => <option value={model} key={model} />)}</datalist></div><div className="button-row"><button onClick={testConnection} disabled={connection.kind === 'working' || !apiKey.trim()}>{connection.kind === 'working' ? '測試中…' : '測試連線'}</button><button className="secondary-button" onClick={loadModels} disabled={!apiKey.trim()}>讀取模型清單</button><button className="danger-button" onClick={clearApiKey} disabled={!apiKey}>清除 API Key</button></div>{connection.message && <p className={connection.kind === 'error' ? 'error-text' : 'success-text'} role="status">{connection.message}</p>}<p className="privacy-note">目前 provider：{provider === 'cgu' ? 'CGU API（預設 OSS 120B）' : 'Google AI Studio（預設 gemini-flash-lite-latest）'}。API Key 保存期限為 24 小時。</p><hr className="api-guide-divider" /><a className="api-guide-link" href="./doc/googleAIstudioAPI/google-ai-studio-api-key-guide.html" target="_blank" rel="noreferrer">Google AI Studio API Key 申請指南 ↗</a></section></div>}
     {notesOpen && <aside ref={notesPanelRef} className={`notes-panel ${notesDragging ? 'is-dragging' : ''}`} style={{ left: notesLayout.x, top: notesLayout.y, width: notesLayout.width, height: notesLayout.height }}><div className="notes-panel-header" onPointerDown={startNotesDrag}><strong>筆記</strong><div className="notes-panel-actions"><button className="notes-action" onClick={printNotes}>列印</button><button className="notes-close" onClick={() => setNotesOpen(false)} aria-label="關閉筆記">×</button></div></div><div className="notes-panel-body">{notes.length === 0 && <p className="notes-empty">按下 AI 回覆右上角的愛心，即可將問答加入筆記。</p>}{notes.map((note) => <article className="conversation-note" key={note.id}><button className="conversation-note-link" onClick={() => jumpToConversation(note.userMessageId)}>對話筆記</button><textarea value={note.text} onChange={(event) => updateNote(note.id, event.target.value)} aria-label="編輯對話筆記" rows={6} /></article>)}{screenshots.map((shot) => <figure className="note-screenshot" key={shot.id}><img src={shot.dataUrl} alt="筆記截圖" />{shot.time !== null ? <figcaption><button className="screenshot-jump" onClick={() => jumpTo(shot.time ?? 0)}>跳到影片 {fmt(shot.time)}</button></figcaption> : <figcaption>截圖（無時間資訊）</figcaption>}<textarea className="screenshot-note-text" value={shot.text} onChange={(event) => updateScreenshotText(shot.id, event.target.value)} placeholder="為這張圖片新增文字" aria-label="編輯截圖文字" rows={3} /></figure>)}<textarea className="free-note" value={freeNote} onChange={(event) => setFreeNote(event.target.value)} onPaste={handleNotePaste} placeholder="可輸入文字或貼上剪貼簿截圖" aria-label="其他筆記" /></div></aside>}
+    {notesOpen && <button className="notes-side-toggle" type="button" onClick={toggleNotesSide} aria-label={notesSide === 'left' ? '將筆記移到右側' : '將筆記移到左側'}>{notesSide === 'left' ? '筆記移到右側' : '筆記移到左側'}</button>}
     <main className="layout tutor-layout" style={{ gridTemplateColumns: COLUMN_RATIO_COLUMNS[columnRatio] }}>
       <section className="left-column video-column">
         <article className="video-card"><div id="video-player" className="player-wrap">{videoId ? <div ref={playerHost} className="youtube-host" /> : <div className="empty-player"><span>▶</span><p>使用「載入課程包」開始學習</p></div>}{showSubtitles && currentSubtitle && <div className="subtitle-overlay" aria-live="polite">{currentSubtitle}</div>}</div>{videoError && <p className="error-text" role="alert">{videoError} {videoId && <a href={youtubeUrl(videoId)} target="_blank" rel="noreferrer">在 YouTube 開啟</a>}</p>}</article>

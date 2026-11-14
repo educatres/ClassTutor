@@ -1,4 +1,5 @@
 import type { SubtitleCue, TranscriptDocument } from '../types'
+import { unzipSync } from 'fflate'
 import { parseSubtitleFile } from './subtitleParser'
 import { parseYouTubeVideoId, youtubeUrl } from './youtube'
 
@@ -7,6 +8,9 @@ const PACKAGE_PREFIX = 'VAIT1'
 // course package is meant to prevent casual editing of the URL/transcript;
 // never put confidential teaching material in a public package.
 const PACKAGE_SECRET = 'video-ai-tutor-course-package-v1'
+const MAX_PACKAGE_SIZE = 12 * 1024 * 1024
+const MAX_ARCHIVE_ENTRIES = 16
+const MAX_ARCHIVE_UNCOMPRESSED_SIZE = 24 * 1024 * 1024
 
 type CoursePackagePayload = {
   version: 1
@@ -55,9 +59,8 @@ function isTranscript(value: unknown): value is TranscriptDocument {
     })
 }
 
-export async function readCoursePackage(file: File) {
-  if (file.size > 12 * 1024 * 1024) throw new Error('課程包超過 12 MiB 上限。')
-  const raw = (await file.text()).trim().split('.')
+async function decodeCoursePackageText(packageText: string) {
+  const raw = packageText.trim().split('.')
   if (raw.length !== 3 || raw[0] !== PACKAGE_PREFIX) throw new Error('不是有效的 ClassTutor 課程包。')
   let decoded: CoursePackagePayload
   try {
@@ -66,6 +69,34 @@ export async function readCoursePackage(file: File) {
   } catch { throw new Error('課程包解密失敗，檔案可能損壞或不是本系統產生。') }
   if (decoded.version !== 1 || (decoded.courseIntro !== undefined && typeof decoded.courseIntro !== 'string') || !parseYouTubeVideoId(decoded.videoUrl) || decoded.videoId !== parseYouTubeVideoId(decoded.videoUrl) || !isTranscript(decoded.transcript)) throw new Error('課程包內容不完整或格式不受支援。')
   return decoded
+}
+
+function isSafeArchivePath(path: string) {
+  return path !== '' && !path.startsWith('/') && !path.split('/').includes('..')
+}
+
+async function readCompressedCoursePackage(file: File) {
+  let entries: Record<string, Uint8Array>
+  try {
+    entries = unzipSync(new Uint8Array(await file.arrayBuffer()))
+  } catch { throw new Error('壓縮課程包解壓縮失敗，檔案可能損壞或格式不受支援。') }
+  const allPaths = Object.keys(entries)
+  if (allPaths.some((path) => !isSafeArchivePath(path))) throw new Error('壓縮課程包包含不安全的檔案路徑。')
+  const paths = allPaths.filter((path) => !path.endsWith('/'))
+  if (paths.length > MAX_ARCHIVE_ENTRIES) throw new Error('壓縮課程包檔案數量超過上限。')
+  const totalSize = paths.reduce((total, path) => total + entries[path].byteLength, 0)
+  if (totalSize > MAX_ARCHIVE_UNCOMPRESSED_SIZE) throw new Error('壓縮課程包解壓後超過 24 MiB 上限。')
+  const candidates = paths.filter((path) => path.toLowerCase().endsWith('.classtutor'))
+  if (candidates.length !== 1) throw new Error(candidates.length ? '壓縮課程包只能包含一個 .classtutor 課程包。' : '壓縮課程包中找不到 .classtutor 課程包。')
+  return decodeCoursePackageText(new TextDecoder().decode(entries[candidates[0]]))
+}
+
+export async function readCoursePackage(file: File) {
+  if (file.size > MAX_PACKAGE_SIZE) throw new Error('課程包超過 12 MiB 上限。')
+  const fileName = file.name.toLowerCase()
+  if (fileName.endsWith('.clssstutor')) return readCompressedCoursePackage(file)
+  if (!fileName.endsWith('.classtutor')) throw new Error('只允許載入 .classtutor 或壓縮的 .clssstutor 課程包。')
+  return decodeCoursePackageText(await file.text())
 }
 
 export function downloadCoursePackage(fileName: string, content: string) {

@@ -4,6 +4,8 @@ import { getEligibleCues, retrieveSources } from '../src/services/retrieval'
 import { parseYouTubeVideoId } from '../src/services/youtube'
 import { makeCitationCards, parseAIAnswer } from '../src/services/citationValidator'
 import { buildChunks } from '../src/services/chunker'
+import { zipSync } from 'fflate'
+import { readCoursePackage } from '../src/services/coursePackage'
 
 describe('YouTube URL parsing', () => {
   it('accepts supported URL forms and rejects other hosts', () => {
@@ -34,5 +36,12 @@ describe('citation validation', () => {
     const answer = parseAIAnswer('{"status":"answered","answer":"好","citedChunkIds":["chunk_0001","fake"]}', new Set(['chunk_0001']))
     expect(answer.citedChunkIds).toEqual(['chunk_0001'])
     expect(makeCitationCards(answer, [source], 'progress', 2)).toHaveLength(1)
+  })
+})
+
+describe('compressed course packages', () => {
+  it('recognizes .clssstutor archives and requires one .classtutor entry', async () => {
+    const archive = zipSync({ 'readme.txt': new TextEncoder().encode('not a course package') })
+    await expect(readCoursePackage(new File([archive], 'lesson.clssstutor'))).rejects.toThrow('找不到 .classtutor')
   })
 })

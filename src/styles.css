@@ -319,6 +319,12 @@ body { overflow-x: hidden; }
 .teacher-shell .subtitle-editor,
 .teacher-shell .teacher-output,
 .teacher-shell .teacher-provider-note { border-radius: 5px; }
+.teacher-shell .topbar { position: static; margin-bottom: 12px; padding-top: 5px; padding-bottom: 5px; backdrop-filter: none; }
+.teacher-shell .topbar .eyebrow { margin-bottom: 3px; font-size: 9px; }
+.teacher-shell .topbar h1 { font-size: clamp(20px, 2.3vw, 28px); line-height: 1.1; }
+.teacher-shell .topbar .teacher-subtitle { margin-top: 3px; font-size: 11px; }
+.teacher-shell .topbar .teacher-link { padding: 5px 8px; font-size: 11px; }
+@media (max-width: 560px) { .teacher-shell .topbar { margin-bottom: 10px; padding-top: 3px; padding-bottom: 3px; } .teacher-shell .topbar h1 { font-size: 20px; } .teacher-shell .topbar .teacher-link { padding: 5px 7px; } }
 .teacher-ai-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 24px; background: rgba(15, 34, 29, .72); backdrop-filter: blur(3px); }
 .teacher-ai-dialog { width: min(460px, 100%); padding: 28px; border: 1px solid rgba(255, 255, 255, .35); border-radius: 5px; background: #fff; box-shadow: 0 24px 70px rgba(0, 0, 0, .25); text-align: center; }
 .teacher-ai-dialog-icon { display: grid; place-items: center; width: 48px; height: 48px; margin: 0 auto 14px; border-radius: 5px; background: var(--teal); color: #fff; font: 700 13px 'DM Mono', monospace; }

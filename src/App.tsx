@@ -331,7 +331,9 @@ export default function App() {
     if ((videoId || transcript || chat.length) && !window.confirm('匯入新課程包會清除目前影片與對話，是否繼續？')) return
     try {
       const course = await readCoursePackage(file)
-      setVideoError(''); setVideoId(course.videoId); setVideoTitle(''); setTranscript(course.transcript); setChat([]); setNotes([]); setFreeNote(''); setScreenshots([]); setPlayerReady(false); setCurrentTime(0); setShowSubtitles(false); setNotice(`已載入課程包：${course.transcript.fileName} · ${course.transcript.cueCount} 段字幕。`)
+      const intro = course.courseIntro?.trim() ?? ''
+      const introMessage: ChatMessage[] = intro ? [{ id: crypto.randomUUID(), role: 'assistant', text: `## 課程簡介\n\n${intro}`, createdAt: Date.now(), mode: 'progress', cutoffSeconds: 0 }] : []
+      setVideoError(''); setVideoId(course.videoId); setVideoTitle(''); setTranscript(course.transcript); setChat(introMessage); setNotes([]); setFreeNote(''); setScreenshots([]); setPlayerReady(false); setCurrentTime(0); setShowSubtitles(false); setNotice(`已載入課程包：${course.transcript.fileName} · ${course.transcript.cueCount} 段字幕。`)
     } catch (error: unknown) { setNotice(error instanceof Error ? error.message : '課程包匯入失敗。') }
   }
 

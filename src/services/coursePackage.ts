@@ -14,6 +14,7 @@ type CoursePackagePayload = {
   videoId: string
   videoUrl: string
   transcript: TranscriptDocument
+  courseIntro?: string
 }
 
 function bytesToBase64(bytes: Uint8Array) {
@@ -32,11 +33,11 @@ async function packageKey() {
   return crypto.subtle.importKey('raw', digest, 'AES-GCM', false, ['encrypt', 'decrypt'])
 }
 
-export async function createCoursePackage(videoUrlInput: string, subtitleFile: File) {
+export async function createCoursePackage(videoUrlInput: string, subtitleFile: File, courseIntro = '') {
   const videoId = parseYouTubeVideoId(videoUrlInput)
   if (!videoId) throw new Error('請輸入合法的 YouTube 網址。')
   const transcript = await parseSubtitleFile(subtitleFile)
-  const payload: CoursePackagePayload = { version: 1, createdAt: new Date().toISOString(), videoId, videoUrl: youtubeUrl(videoId), transcript }
+  const payload: CoursePackagePayload = { version: 1, createdAt: new Date().toISOString(), videoId, videoUrl: youtubeUrl(videoId), transcript, courseIntro: courseIntro.trim() }
   const iv = crypto.getRandomValues(new Uint8Array(12))
   const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, await packageKey(), new TextEncoder().encode(JSON.stringify(payload)))
   const packageText = `${PACKAGE_PREFIX}.${bytesToBase64(iv)}.${bytesToBase64(new Uint8Array(encrypted))}`
@@ -63,7 +64,7 @@ export async function readCoursePackage(file: File) {
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: base64ToBytes(raw[1]) }, await packageKey(), base64ToBytes(raw[2]))
     decoded = JSON.parse(new TextDecoder().decode(plain)) as CoursePackagePayload
   } catch { throw new Error('課程包解密失敗，檔案可能損壞或不是本系統產生。') }
-  if (decoded.version !== 1 || !parseYouTubeVideoId(decoded.videoUrl) || decoded.videoId !== parseYouTubeVideoId(decoded.videoUrl) || !isTranscript(decoded.transcript)) throw new Error('課程包內容不完整或格式不受支援。')
+  if (decoded.version !== 1 || (decoded.courseIntro !== undefined && typeof decoded.courseIntro !== 'string') || !parseYouTubeVideoId(decoded.videoUrl) || decoded.videoId !== parseYouTubeVideoId(decoded.videoUrl) || !isTranscript(decoded.transcript)) throw new Error('課程包內容不完整或格式不受支援。')
   return decoded
 }
 

@@ -291,7 +291,6 @@ body { overflow-x: hidden; }
 .summary-feature .feature-title { margin-bottom: 14px; }
 .summary-feature label { margin-top: 12px; }
 .summary-editor-textarea { min-height: 190px; resize: vertical; line-height: 1.65; }
-.summary-note-textarea { min-height: 76px; resize: vertical; line-height: 1.6; }
 .summary-actions { margin-top: 12px; }
 .summary-actions button { flex: 1; }
 .teacher-hero-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 12px 0 0; }

@@ -542,14 +542,15 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 
 /* Student controls stay in one compact row. Less frequent actions are grouped
    behind the menu so the status and note controls remain easy to find. */
-.student-shell .chat-toolbar-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-.student-shell .chat-toolbar-row::-webkit-scrollbar { display: none; }
-.student-shell .chat-toolbar-row > .status-pill { margin-right: 0; flex: 0 0 auto; }
+.student-shell .chat-toolbar-row { flex-wrap: nowrap; overflow: visible; }
+.student-shell .chat-toolbar-row > .status-pill { order: 4; margin-left: auto; margin-right: 0; flex: 0 0 auto; }
 .student-shell .chat-toolbar-row .subtitle-toggle,
 .student-shell .chat-toolbar-row .ratio-select,
-.student-shell .chat-toolbar-row .notes-toggle,
-.student-shell .student-menu { flex: 0 0 auto; }
-.student-shell .student-menu { position: relative; margin-left: auto; }
+.student-shell .chat-toolbar-row .notes-toggle { flex: 0 0 auto; }
+.student-shell .chat-toolbar-row .subtitle-toggle { order: 1; }
+.student-shell .chat-toolbar-row .ratio-select { order: 2; }
+.student-shell .chat-toolbar-row .notes-toggle { order: 3; }
+.student-shell .student-menu { position: relative; order: 5; margin-left: 0; flex: 0 0 auto; }
 .student-shell .student-menu-toggle { padding: 5px 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--teal) !important; color: var(--ink-on-primary) !important; font-size: 12pt !important; line-height: 1.25; white-space: nowrap; }
 .student-shell .student-menu-popover { position: absolute; top: calc(100% + 6px); right: 0; z-index: 70; display: grid; min-width: 170px; padding: 5px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); box-shadow: 0 12px 30px rgba(18, 50, 75, .2); }
 .student-shell .student-menu-popover button,

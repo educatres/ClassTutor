@@ -566,3 +566,8 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .student-shell .conversation-note,
 .student-shell .note-screenshot { background: var(--field); border-color: var(--line); }
 .student-shell .notes-panel-body textarea { background: var(--card); }
+
+/* Student text must remain readable at a minimum of 12pt. */
+.student-shell :where(a, button, input, textarea, select, label, p, li, span, strong, small, figcaption, code, pre, h1, h2, h3, h4, h5, h6) { font-size: max(12pt, 1em) !important; }
+.student-shell .notes-toggle::before,
+.student-shell .notes-panel-header strong::before { content: '📝'; display: inline-block; margin-right: 0.35em; font-size: 12pt; line-height: 1; }

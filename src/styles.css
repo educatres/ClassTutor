@@ -525,7 +525,7 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .teacher-shell .glossary-item span,
 .teacher-shell .reference-chip,
 .teacher-shell .subtitle-row > span,
-.teacher-shell .subtitle-original,
+.teacher-shell .subtitle-original { font-size: 12pt !important; }
 .teacher-shell .package-feature { background: #fff !important; }
 .teacher-shell .package-feature .teacher-generate { width: auto; display: inline-flex; }
 .course-package-overlay-load { width: auto; min-width: 0; display: inline-flex; }

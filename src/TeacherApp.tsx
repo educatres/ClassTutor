@@ -7,7 +7,6 @@ import { createCoursePackage, downloadCoursePackage } from './services/coursePac
 import { parseYouTubeVideoId } from './services/youtube'
 import { readTeacherReference, type TeacherReference } from './services/referenceReader'
 import { createSingleSubtitlePolishPrompt, createTeacherSummaryPrompt, generateTeacherText, generateTeacherTextWithRetry, localPolish, localSummary, parseSinglePolishedText } from './services/teacherAi'
-import ThemePicker from './ThemePicker'
 
 type SummaryKind = 'class' | 'lesson' | 'handout'
 type GlossaryItem = { original: string; suggested: string }
@@ -139,6 +138,5 @@ export default function TeacherApp() {
       </section>
       {(error || notice) && <p className={error ? 'error-text teacher-message' : 'success-text teacher-message'} role={error ? 'alert' : 'status'}>{error || notice}</p>}
     </main>
-    <footer><ThemePicker /></footer>
   </div>
 }

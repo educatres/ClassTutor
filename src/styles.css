@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;600;700;800&display=swap');
-:root { font-family: 'Noto Sans TC', system-ui, sans-serif; color: var(--ink); background: var(--page); font-synthesis: none; --ink: #2e2521; --muted: #75685f; --line: #dfd1c6; --card: #fffdfb; --teal: #4a2f24; --teal-dark: #2d1d18; --mint: #eadbd1; --coral: #b54a42; --page: #f5eee8; --page-glow: #efe0d5; --soft: #f3e8df; --soft-strong: #eadbd1; --field: #fffaf7; --accent: #c87535; --accent-dark: #9d5728; --accent-soft: #fae8d7; --error-soft: #f7e0de; --ink-on-primary: #fff9f4; }
+:root { font-family: 'Noto Sans TC', system-ui, sans-serif; color: var(--ink); background: var(--page); font-synthesis: none; --ink: #1d2a33; --muted: #63727c; --line: #d6e0e5; --card: #fff; --teal: #1f4968; --teal-dark: #12324b; --mint: #e3f0ea; --coral: #b54a42; --page: #f2f5f7; --page-glow: #e4edf3; --soft: #eff4f7; --soft-strong: #e3f0ea; --field: #f9fbfc; --accent: #d9824d; --accent-dark: #a45b2f; --accent-soft: #f9e8dc; --error-soft: #f7e0de; --ink-on-primary: #f7fbfd; }
 :root[data-theme='navy'] { --ink: #1d2a33; --muted: #63727c; --line: #d6e0e5; --card: #fff; --teal: #1f4968; --teal-dark: #12324b; --mint: #e3f0ea; --coral: #b54a42; --page: #f2f5f7; --page-glow: #e4edf3; --soft: #eff4f7; --soft-strong: #e3f0ea; --field: #f9fbfc; --accent: #d9824d; --accent-dark: #a45b2f; --accent-soft: #f9e8dc; --error-soft: #f7e0de; --ink-on-primary: #f7fbfd; }
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: radial-gradient(circle at 12% -10%, var(--page-glow) 0, transparent 35%), var(--page); }
@@ -363,9 +363,6 @@ body { overflow-x: hidden; }
 .subtitle-original mark { padding: 1px 2px; border-radius: 2px; background: #ffe0dc; color: #b33d2f; }
 
 /* Theme controls and semantic color overrides. */
-.theme-picker { display: flex; align-items: center; gap: 7px; padding: 0; }
-.theme-picker span { color: var(--muted); font-size: 11px; white-space: nowrap; }
-.theme-picker select { width: auto; min-width: 190px; margin: 0; padding: 6px 8px; border-radius: 7px; background: var(--field); color: var(--ink); font-size: 11px; }
 .status-pill { background: var(--card); }
 .status-pill.ready { color: var(--teal-dark); background: var(--mint); border-color: color-mix(in srgb, var(--teal) 25%, var(--line)); }
 .status-pill.asking { color: var(--accent-dark); background: var(--accent-soft); }
@@ -406,7 +403,6 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .teacher-ai-overlay { background: color-mix(in srgb, var(--tea-deep, var(--teal-dark)) 72%, transparent); }
 .danger-button { background: var(--error-soft) !important; color: var(--coral) !important; }
 .cancel-button { color: var(--coral) !important; }
-@media (max-width: 560px) { .theme-picker { justify-content: flex-start; }.theme-picker select { min-width: 0; flex: 1; } }
 .student-shell .toolbar-inline-toggle { display: none !important; }
 @media (min-width: 901px) { .student-shell .tutor-layout { grid-template-columns: minmax(0, 1fr) minmax(280px, 320px); } }
 .course-package-overlay { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 24px; background: color-mix(in srgb, var(--teal-dark) 82%, transparent); backdrop-filter: blur(5px); }
@@ -530,13 +526,11 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .teacher-shell .reference-chip,
 .teacher-shell .subtitle-row > span,
 .teacher-shell .subtitle-original,
-.teacher-shell .theme-picker span,
-.teacher-shell .theme-picker select { font-size: 12pt !important; }
 .teacher-shell .package-feature { background: #fff !important; }
 .teacher-shell .package-feature .teacher-generate { width: auto; display: inline-flex; }
 .course-package-overlay-load { width: auto; min-width: 0; display: inline-flex; }
-.student-session-actions { display: flex; justify-content: flex-end; gap: 6px; margin: 0 0 8px; }
-.student-session-actions .header-action { width: auto; padding: 5px 8px !important; font-size: 11px !important; }
+.student-session-actions { display: flex; justify-content: flex-end; gap: 5px; margin: 0 0 4px; }
+.student-session-actions .header-action { width: auto; height: 27px; min-height: 0; padding: 3px 8px !important; font-size: 11px !important; line-height: 1.2; }
 @media (max-width: 560px) { .student-session-actions { justify-content: stretch; } .student-session-actions .header-action { flex: 1; } }
 .student-shell .settings-dialog .section-heading p { font-size: 0 !important; }
 .student-shell .settings-dialog .section-heading p::after { content: 'API Key 會保存在本機瀏覽器，保存期限 7 天；重新整理後仍可沿用。'; font-size: 12pt; }
@@ -545,3 +539,29 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .student-shell .tutor-layout .right-column { display: flex; flex-direction: column; min-height: 0; }
 .student-shell .student-session-actions { flex: 0 0 auto; }
 .student-shell .tutor-layout .chat-card { flex: 1 1 auto; height: auto; min-height: 0; }
+
+/* Student controls stay in one compact row. Less frequent actions are grouped
+   behind the menu so the status and note controls remain easy to find. */
+.student-shell .chat-toolbar-row { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.student-shell .chat-toolbar-row::-webkit-scrollbar { display: none; }
+.student-shell .chat-toolbar-row > .status-pill { margin-right: 0; flex: 0 0 auto; }
+.student-shell .chat-toolbar-row .subtitle-toggle,
+.student-shell .chat-toolbar-row .ratio-select,
+.student-shell .chat-toolbar-row .notes-toggle,
+.student-shell .student-menu { flex: 0 0 auto; }
+.student-shell .student-menu { position: relative; margin-left: auto; }
+.student-shell .student-menu-toggle { padding: 5px 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--teal) !important; color: var(--ink-on-primary) !important; font-size: 12pt !important; line-height: 1.25; white-space: nowrap; }
+.student-shell .student-menu-popover { position: absolute; top: calc(100% + 6px); right: 0; z-index: 70; display: grid; min-width: 170px; padding: 5px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); box-shadow: 0 12px 30px rgba(18, 50, 75, .2); }
+.student-shell .student-menu-popover button,
+.student-shell .student-menu-popover a { display: block; width: 100%; padding: 8px 10px; border-radius: 5px; background: transparent; color: var(--ink); font-size: 12pt; line-height: 1.35; text-align: left; text-decoration: none; white-space: nowrap; }
+.student-shell .student-menu-popover button:hover,
+.student-shell .student-menu-popover a:hover { background: var(--soft); color: var(--teal-dark); }
+.student-shell .chat-card { display: flex; flex-direction: column; }
+.student-shell .chat-header { flex: 0 0 auto; }
+.student-shell .ask-form { flex: 0 0 auto; margin-top: auto; }
+.student-shell .quick-prompts { flex: 0 0 auto; }
+.student-shell .notes-panel { background: var(--soft); box-shadow: 0 26px 78px rgba(18, 50, 75, .28), 0 8px 24px rgba(18, 50, 75, .18); }
+.student-shell .notes-panel-header { background: var(--soft-strong); }
+.student-shell .conversation-note,
+.student-shell .note-screenshot { background: var(--field); border-color: var(--line); }
+.student-shell .notes-panel-body textarea { background: var(--card); }

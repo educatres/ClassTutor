@@ -552,11 +552,12 @@ input:focus, textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px c
 .student-shell .chat-toolbar-row .notes-toggle { order: 3; }
 .student-shell .student-menu { position: relative; order: 5; margin-left: 0; flex: 0 0 auto; }
 .student-shell .student-menu-toggle { padding: 5px 9px; border: 1px solid var(--line); border-radius: 5px; background: var(--teal) !important; color: var(--ink-on-primary) !important; font-size: 12pt !important; line-height: 1.25; white-space: nowrap; }
-.student-shell .student-menu-popover { position: absolute; top: calc(100% + 6px); right: 0; z-index: 70; display: grid; min-width: 170px; padding: 5px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); box-shadow: 0 12px 30px rgba(18, 50, 75, .2); }
+.student-shell .student-menu-popover { position: absolute; top: calc(100% + 6px); right: 0; z-index: 70; display: flex; flex-direction: column; min-width: 170px; padding: 5px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); box-shadow: 0 12px 30px rgba(18, 50, 75, .2); }
 .student-shell .student-menu-popover button,
 .student-shell .student-menu-popover a { display: block; width: 100%; padding: 8px 10px; border-radius: 5px; background: transparent; color: var(--ink); font-size: 12pt; line-height: 1.35; text-align: left; text-decoration: none; white-space: nowrap; }
 .student-shell .student-menu-popover button:hover,
-.student-shell .student-menu-popover a:hover { background: var(--soft); color: var(--teal-dark); }
+.student-shell .student-menu-popover a:hover { background: var(--teal); color: var(--ink-on-primary) !important; }
+.student-shell .student-menu-divider { height: 1px; margin: 5px 4px; background: var(--line); }
 .student-shell .chat-card { display: flex; flex-direction: column; }
 .student-shell .chat-header { flex: 0 0 auto; }
 .student-shell .ask-form { flex: 0 0 auto; margin-top: auto; }
